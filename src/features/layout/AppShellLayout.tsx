@@ -1,3 +1,5 @@
+import { Led } from '@gfazioli/mantine-led';
+import { spotlight } from '@mantine/spotlight';
 import {
   AppShell,
   Badge,
@@ -5,6 +7,7 @@ import {
   Burger,
   Button,
   Group,
+  Kbd,
   NavLink,
   Stack,
   Text,
@@ -16,6 +19,7 @@ import {
   IconDownload,
   IconListDetails,
   IconPhoto,
+  IconSearch,
   IconSettings,
 } from '@tabler/icons-react';
 import { useState } from 'react';
@@ -26,6 +30,8 @@ import { useQueueData } from '../../app/state/QueueDataContext';
 import { useSettings } from '../../app/state/SettingsContext';
 import { MAX_IMAGES } from '../../domain/presets';
 import { LightboxModal } from '../lightbox/LightboxModal';
+import { AspectCompatibilityModal } from '../pipeline/AspectCompatibilityModal';
+import { CommandSpotlight } from '../spotlight/CommandSpotlight';
 
 export function AppShellLayout() {
   const [mobileOpened, { toggle: toggleMobile, close: closeMobile }] = useDisclosure(false);
@@ -76,13 +82,13 @@ export function AppShellLayout() {
     <AppShell
       header={{ height: 64 }}
       navbar={{
-        width: 240,
+        width: 248,
         breakpoint: 'sm',
         collapsed: { mobile: !mobileOpened },
       }}
       padding="md"
     >
-      <AppShell.Header px="md">
+      <AppShell.Header px="md" className="cyber-shell-header">
         <Group h="100%" justify="space-between" wrap="nowrap" gap="sm">
           <Group gap="sm" wrap="nowrap">
             <Burger opened={mobileOpened} onClick={toggleMobile} hiddenFrom="sm" size="sm" />
@@ -91,7 +97,8 @@ export function AppShellLayout() {
               h={34}
               style={{
                 borderRadius: 9,
-                background: 'linear-gradient(135deg, #6366f1, #a855f7)',
+                background: 'linear-gradient(135deg, #06b6d4, #6366f1 60%, #a855f7)',
+                boxShadow: '0 0 16px rgba(6, 182, 212, 0.35)',
                 display: 'grid',
                 placeItems: 'center',
                 fontWeight: 800,
@@ -107,25 +114,49 @@ export function AppShellLayout() {
                 Runware I2I Pipeline
               </Title>
               <Text size="xs" c="dimmed" visibleFrom="xs">
-                Batch image-to-image editor &bull; LocalStorage + IndexedDB
+                Batch image-to-image studio &bull; LocalStorage + IndexedDB
               </Text>
             </Box>
           </Group>
 
           <Group gap="xs" wrap="nowrap">
+            <Button
+              size="xs"
+              variant="default"
+              leftSection={<IconSearch size={13} />}
+              rightSection={
+                <Kbd size="xs" style={{ fontSize: 10 }}>
+                  Ctrl+K
+                </Kbd>
+              }
+              visibleFrom="md"
+              className="cyber-hud-pill"
+              onClick={() => spotlight.open()}
+            >
+              Commands
+            </Button>
+
             {isRunning && progress && (
-              <Badge color="indigo" variant="light" visibleFrom="md">
+              <Badge
+                color="cyan"
+                variant="light"
+                visibleFrom="md"
+                className="cyber-mono"
+                leftSection={
+                  <Led variant="neon" size={7} color="cyan" animate animationType="pulse" />
+                }
+              >
                 Active: {progress.activeIds.length}
               </Badge>
             )}
-            <Badge variant="default" size="md" visibleFrom="sm">
+            <Badge variant="default" size="md" visibleFrom="sm" className="cyber-mono">
               Queue: {inputs.length} / {MAX_IMAGES}
             </Badge>
-            <Badge variant="default" size="md" visibleFrom="sm">
+            <Badge variant="default" size="md" visibleFrom="sm" className="cyber-mono">
               Outputs: {outputs.length}
             </Badge>
             {totalCost > 0 && (
-              <Badge color="teal" variant="light" size="md" visibleFrom="md">
+              <Badge color="teal" variant="light" size="md" visibleFrom="md" className="cyber-mono">
                 Cost: ${totalCost.toFixed(4)}
               </Badge>
             )}
@@ -144,7 +175,7 @@ export function AppShellLayout() {
         </Group>
       </AppShell.Header>
 
-      <AppShell.Navbar p="sm">
+      <AppShell.Navbar p="sm" className="cyber-shell-navbar">
         <Stack gap={4} h="100%" justify="space-between">
           <Stack gap={4}>
             <Text size="xs" fw={600} c="dimmed" tt="uppercase" px="xs" mb={4}>
@@ -155,7 +186,7 @@ export function AppShellLayout() {
               description="Upload & batch process"
               leftSection={<IconListDetails size={18} />}
               rightSection={
-                <Badge size="xs" variant="light" color="indigo">
+                <Badge size="xs" variant="light" color="cyan" className="cyber-mono">
                   {inputs.length}
                 </Badge>
               }
@@ -167,7 +198,7 @@ export function AppShellLayout() {
               description="Browse generated results"
               leftSection={<IconPhoto size={18} />}
               rightSection={
-                <Badge size="xs" variant="light" color="teal">
+                <Badge size="xs" variant="light" color="teal" className="cyber-mono">
                   {outputs.length}
                 </Badge>
               }
@@ -190,12 +221,24 @@ export function AppShellLayout() {
             />
           </Stack>
 
-          <Stack gap={4} px="xs" pb="xs">
-            <Text size="xs" c="dimmed">
+          <Stack gap={6} px="xs" pb="xs">
+            <Group gap={6} wrap="nowrap">
+              <Led
+                variant="neon"
+                size={8}
+                color={apiKey.trim() ? 'teal' : 'yellow'}
+                animate={isRunning}
+                animationType="breathe"
+              />
+              <Text size="xs" c="dimmed" className="cyber-mono">
+                {apiKey.trim() ? 'API ARMED' : 'API KEY NEEDED'}
+              </Text>
+            </Group>
+            <Text size="xs" c="dimmed" className="cyber-mono">
               Mode: {settings.deliveryMethod.toUpperCase()} &bull; {settings.concurrency}x parallel
             </Text>
             {totalCost > 0 && (
-              <Text size="xs" c="teal">
+              <Text size="xs" c="teal" className="cyber-mono">
                 Total cost: ${totalCost.toFixed(4)}
               </Text>
             )}
@@ -207,6 +250,8 @@ export function AppShellLayout() {
         <Outlet />
       </AppShell.Main>
 
+      <CommandSpotlight />
+      <AspectCompatibilityModal />
       <LightboxModal />
     </AppShell>
   );

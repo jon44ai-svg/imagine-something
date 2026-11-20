@@ -3,7 +3,6 @@ import { useMemo, useState } from 'react';
 import { useQueueData } from '../../app/state/QueueDataContext';
 import type { OutputRecord, PipelineFilter } from '../../domain/models';
 import { SettingsSummaryBar } from '../settings/SettingsSummaryBar';
-import { AspectCompatibilityModal } from './AspectCompatibilityModal';
 import { PipelineItemRow } from './PipelineItemRow';
 import { PipelineProgress } from './PipelineProgress';
 import { PipelineToolbar } from './PipelineToolbar';
@@ -66,7 +65,6 @@ export function PipelinePage() {
           </Stack>
         </Card>
       </Stack>
-      <AspectCompatibilityModal />
     </Container>
   );
 }
