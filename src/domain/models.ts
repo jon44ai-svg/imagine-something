@@ -25,6 +25,26 @@ export type DeliveryMethod = 'sync' | 'async';
 
 export type ResolutionTier = '1K' | '2K' | '4K';
 
+export interface NormalizedRect {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
+export type FaceDetectionSource = 'native' | 'heuristic' | 'portrait-fallback';
+
+export interface FaceDetectionResult {
+  boxes: NormalizedRect[];
+  source: FaceDetectionSource;
+}
+
+export interface ImageZoomTransform {
+  scale: number;
+  offsetX: number;
+  offsetY: number;
+}
+
 export interface GenerationSettings {
   model: string;
   positivePrompt: string;

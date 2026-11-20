@@ -6,7 +6,6 @@ import {
   Card,
   Grid,
   Group,
-  Image,
   Loader,
   Stack,
   Text,
@@ -14,8 +13,11 @@ import {
 import { notifications } from '@mantine/notifications';
 import { IconAlertCircle, IconPlayerPlay, IconTrash, IconX } from '@tabler/icons-react';
 import { useExecution } from '../../app/state/ExecutionContext';
+import { useLightbox } from '../../app/state/LightboxContext';
 import { useQueueData } from '../../app/state/QueueDataContext';
 import type { InputRecord, OutputRecord } from '../../domain/models';
+import { useImageZoom } from '../media/useImageZoom';
+import { ZoomableImage } from '../media/ZoomableImage';
 import { OutputCard } from './OutputCard';
 
 export interface PipelineItemRowProps {
@@ -27,8 +29,13 @@ export interface PipelineItemRowProps {
 export function PipelineItemRow({ item, index, outputs }: PipelineItemRowProps) {
   const { getObjectUrl, removeInput } = useQueueData();
   const { isRunning, runPipeline, cancelItem } = useExecution();
+  const { openInputLightbox } = useLightbox();
 
   const thumbUrl = getObjectUrl(item.id, item.blob);
+  const thumbZoom = useImageZoom({
+    imageSrc: thumbUrl,
+    cacheKey: `in:${item.id}`,
+  });
 
   const handleRemove = () => {
     if (isRunning) {
@@ -93,9 +100,8 @@ export function PipelineItemRow({ item, index, outputs }: PipelineItemRowProps) 
         <Grid.Col span={{ base: 12, md: 4, lg: 3 }}>
           <Group align="flex-start" wrap="nowrap" gap="sm">
             <Box
-              pos="relative"
-              w={82}
-              h={82}
+              w={110}
+              h={110}
               style={{
                 borderRadius: 8,
                 overflow: 'hidden',
@@ -103,18 +109,33 @@ export function PipelineItemRow({ item, index, outputs }: PipelineItemRowProps) 
                 border: '1px solid var(--mantine-color-dark-4)',
               }}
             >
-              <Image src={thumbUrl} alt={item.name} w={82} h={82} fit="cover" loading="lazy" />
-              <Badge
-                size="xs"
-                variant="filled"
-                color="dark"
-                pos="absolute"
-                top={4}
-                left={4}
-                px={5}
-              >
-                #{index}
-              </Badge>
+              <ZoomableImage
+                src={thumbUrl}
+                alt={item.name}
+                transform={thumbZoom.transform}
+                fit="cover"
+                height={110}
+                loading="lazy"
+                showOverlayControls
+                compactControls
+                faceFocusActive={thumbZoom.faceFocusActive}
+                isDetectingFace={thumbZoom.isDetectingFace}
+                topLeftOverlay={
+                  <Badge size="xs" variant="filled" color="dark" px={5}>
+                    #{index}
+                  </Badge>
+                }
+                onZoomIn={thumbZoom.zoomIn}
+                onZoomOut={thumbZoom.zoomOut}
+                onResetZoom={thumbZoom.resetZoom}
+                onToggleFaceFocus={() => void thumbZoom.toggleFaceFocus()}
+                onWheelZoom={thumbZoom.applyWheelZoom}
+                onPanByPixels={thumbZoom.panByPixels}
+                onImageClick={() => {
+                  if (!thumbZoom.isZoomed) openInputLightbox(item.id);
+                }}
+                onExpandClick={() => openInputLightbox(item.id)}
+              />
             </Box>
 
             <Stack gap={4} style={{ flex: 1, minWidth: 0 }}>

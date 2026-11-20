@@ -1,7 +1,7 @@
 import { Button, Card, Container, Group, SimpleGrid, Stack, Text, Title } from '@mantine/core';
 import { modals } from '@mantine/modals';
-import { IconArrowLeft, IconTrash } from '@tabler/icons-react';
-import { useMemo } from 'react';
+import { IconArrowLeft, IconFaceId, IconTrash } from '@tabler/icons-react';
+import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useExecution } from '../../app/state/ExecutionContext';
 import { useQueueData } from '../../app/state/QueueDataContext';
@@ -11,6 +11,7 @@ export function GalleryPage() {
   const { outputs, clearOutputs } = useQueueData();
   const { isRunning } = useExecution();
   const navigate = useNavigate();
+  const [focusAllFaces, setFocusAllFaces] = useState(false);
 
   const sortedOutputs = useMemo(
     () => [...outputs].sort((a, b) => b.createdAt - a.createdAt),
@@ -45,6 +46,16 @@ export function GalleryPage() {
           <Group gap="xs">
             <Button
               size="xs"
+              variant={focusAllFaces ? 'filled' : 'default'}
+              color={focusAllFaces ? 'indigo' : undefined}
+              leftSection={<IconFaceId size={14} />}
+              disabled={outputs.length === 0}
+              onClick={() => setFocusAllFaces((prev) => !prev)}
+            >
+              {focusAllFaces ? 'Focus Faces: On' : 'Focus Faces'}
+            </Button>
+            <Button
+              size="xs"
               variant="default"
               leftSection={<IconArrowLeft size={14} />}
               onClick={() => navigate('/pipeline')}
@@ -72,7 +83,13 @@ export function GalleryPage() {
           ) : (
             <SimpleGrid cols={{ base: 2, xs: 3, sm: 4, md: 5 }} spacing="md">
               {sortedOutputs.map((out) => (
-                <OutputCard key={out.id} output={out} caption={out.inputName} fullWidth />
+                <OutputCard
+                  key={out.id}
+                  output={out}
+                  caption={out.inputName}
+                  fullWidth
+                  defaultFaceFocus={focusAllFaces}
+                />
               ))}
             </SimpleGrid>
           )}

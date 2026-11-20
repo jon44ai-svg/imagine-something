@@ -21,6 +21,7 @@ import type {
   ISettingsReader,
   ISettingsWriter,
 } from '../domain/ports/storage';
+import type { IFaceDetector } from '../domain/ports/vision';
 import { CanvasInputImageEncoder } from '../infrastructure/media/canvasInputImageEncoder';
 import { BrowserImageDimensionReader } from '../infrastructure/media/imageDimensionReader';
 import { OutputBlobHydrator } from '../infrastructure/media/outputBlobHydrator';
@@ -32,6 +33,7 @@ import { IndexedDbInputStore } from '../infrastructure/storage/indexedDbInputSto
 import { IndexedDbOutputStore } from '../infrastructure/storage/indexedDbOutputStore';
 import { LocalStorageCredentialStore } from '../infrastructure/storage/localStorageCredentialStore';
 import { LocalStorageSettingsStore } from '../infrastructure/storage/localStorageSettingsStore';
+import { CompositeFaceDetector } from '../infrastructure/vision/compositeFaceDetector';
 import { BoundedConcurrencyPool } from '../utils/boundedConcurrencyPool';
 import { BrowserFileDownloader } from '../utils/browserDownload';
 import { SystemClock } from '../utils/clock';
@@ -47,6 +49,7 @@ export interface AppContainer {
   inputReader: IInputReader;
   outputReader: IOutputReader;
   objectUrlRegistry: IObjectUrlRegistry;
+  faceDetector: IFaceDetector;
   ingestFiles: IngestFilesUseCase;
   removeInput: RemoveInputUseCase;
   removeOutput: RemoveOutputUseCase;
@@ -84,6 +87,7 @@ export function createAppContainer(): AppContainer {
   const outputHydrator = new OutputBlobHydrator();
   const zipBuilder = new StoreZipBuilder();
   const fileDownloader = new BrowserFileDownloader();
+  const faceDetector = new CompositeFaceDetector();
 
   // Runware inference adapters (sync + async submit/poll — future backend proxy swap point)
   const runwareTransport = new RunwareHttpTransport();
@@ -113,6 +117,7 @@ export function createAppContainer(): AppContainer {
     inputReader: inputStore,
     outputReader: outputStore,
     objectUrlRegistry,
+    faceDetector,
     ingestFiles: new IngestFilesUseCase(
       inputStore,
       inputStore,

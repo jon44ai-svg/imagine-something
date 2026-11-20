@@ -1,22 +1,35 @@
-import { ActionIcon, Box, Card, Group, Image, Text, Tooltip } from '@mantine/core';
+import { ActionIcon, Card, Group, Text, Tooltip } from '@mantine/core';
 import { IconDownload, IconX } from '@tabler/icons-react';
 import { useServices } from '../../app/ServicesContext';
 import { useLightbox } from '../../app/state/LightboxContext';
 import { useQueueData } from '../../app/state/QueueDataContext';
 import type { OutputRecord } from '../../domain/models';
+import { useImageZoom } from '../media/useImageZoom';
+import { ZoomableImage } from '../media/ZoomableImage';
 
 export interface OutputCardProps {
   output: OutputRecord;
   caption: string;
   fullWidth?: boolean;
+  defaultFaceFocus?: boolean;
 }
 
-export function OutputCard({ output, caption, fullWidth = false }: OutputCardProps) {
+export function OutputCard({
+  output,
+  caption,
+  fullWidth = false,
+  defaultFaceFocus = false,
+}: OutputCardProps) {
   const { exportSingleOutput } = useServices();
   const { getObjectUrl, removeOutput } = useQueueData();
   const { openLightbox, activeOutputId, closeLightbox } = useLightbox();
 
   const imageSrc = getObjectUrl(output.id, output.blob, output.imageURL);
+  const zoom = useImageZoom({
+    imageSrc,
+    cacheKey: `out:${output.id}`,
+    initialFaceFocus: defaultFaceFocus,
+  });
 
   const handleDelete = async () => {
     if (activeOutputId === output.id) {
@@ -25,27 +38,46 @@ export function OutputCard({ output, caption, fullWidth = false }: OutputCardPro
     await removeOutput(output.id);
   };
 
+  const faceBadgeText =
+    zoom.faceFocusActive && zoom.faceResult
+      ? zoom.faceResult.boxes.length > 1
+        ? `Face ${zoom.activeFaceIndex + 1}/${zoom.faceResult.boxes.length}`
+        : zoom.faceResult.source === 'portrait-fallback'
+          ? 'Portrait'
+          : 'Face'
+      : null;
+
   return (
     <Card
       withBorder
       padding={0}
       radius="sm"
-      w={fullWidth ? '100%' : 156}
+      w={fullWidth ? '100%' : 176}
       style={{ overflow: 'hidden' }}
     >
-      <Box
-        onClick={() => openLightbox(output.id)}
-        style={{ cursor: 'zoom-in', aspectRatio: '1 / 1', overflow: 'hidden' }}
-      >
-        <Image
-          src={imageSrc}
-          alt={caption}
-          h="100%"
-          w="100%"
-          fit="cover"
-          loading="lazy"
-        />
-      </Box>
+      <ZoomableImage
+        src={imageSrc}
+        alt={caption}
+        transform={zoom.transform}
+        fit="cover"
+        aspectRatio="1 / 1"
+        loading="lazy"
+        showOverlayControls
+        compactControls
+        faceFocusActive={zoom.faceFocusActive}
+        isDetectingFace={zoom.isDetectingFace}
+        faceBadgeText={faceBadgeText}
+        onZoomIn={zoom.zoomIn}
+        onZoomOut={zoom.zoomOut}
+        onResetZoom={zoom.resetZoom}
+        onToggleFaceFocus={() => void zoom.toggleFaceFocus()}
+        onWheelZoom={zoom.applyWheelZoom}
+        onPanByPixels={zoom.panByPixels}
+        onImageClick={() => {
+          if (!zoom.isZoomed) openLightbox(output.id);
+        }}
+        onExpandClick={() => openLightbox(output.id)}
+      />
 
       <Group justify="space-between" gap={4} px="xs" py={6} wrap="nowrap">
         <Text size="xs" c="dimmed" truncate style={{ flex: 1, minWidth: 0 }} title={caption}>

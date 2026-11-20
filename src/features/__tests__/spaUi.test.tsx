@@ -51,6 +51,12 @@ function createStubContainer(initial?: {
       release: vi.fn(),
       releaseAll: vi.fn(),
     },
+    faceDetector: {
+      detectFaces: vi.fn().mockResolvedValue({
+        boxes: [{ x: 0.35, y: 0.15, width: 0.25, height: 0.25 }],
+        source: 'heuristic',
+      }),
+    },
     ingestFiles: { execute: vi.fn() } as unknown as AppContainer['ingestFiles'],
     removeInput: { execute: vi.fn().mockResolvedValue([]) } as unknown as AppContainer['removeInput'],
     removeOutput: { execute: vi.fn().mockResolvedValue(undefined) } as unknown as AppContainer['removeOutput'],
@@ -206,10 +212,71 @@ describe('SPA UI flows (Settings & Lightbox)', () => {
     expect(await screen.findByText('Original Input')).toBeInTheDocument();
     expect(screen.getByText('Generated Output')).toBeInTheDocument();
 
+    // Lightbox Zoom In & Focus Face work cleanly
+    await user.click(screen.getByRole('button', { name: 'Lightbox zoom in' }));
+    expect(await screen.findByText('135%')).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Focus Face' }));
+    expect(await screen.findByRole('button', { name: 'Focus Face: On' })).toBeInTheDocument();
+
     // Escape closes modal
     await user.keyboard('{Escape}');
     await waitFor(() => {
       expect(screen.queryByText('cat.png (1 / 2)')).not.toBeInTheDocument();
     });
+  });
+
+  it('supports per-image zoom and focus-on-face controls directly on pipeline cards', async () => {
+    const user = userEvent.setup();
+    const container = createStubContainer({
+      inputs: [
+        {
+          id: 'in-1',
+          name: 'portrait.png',
+          type: 'image/png',
+          blob: new Blob(['orig'], { type: 'image/png' }),
+          width: 512,
+          height: 512,
+          status: 'done',
+          error: '',
+          order: 0,
+          createdAt: 1000,
+        },
+      ],
+      outputs: [
+        {
+          id: 'out-1',
+          inputId: 'in-1',
+          inputName: 'portrait.png',
+          blob: new Blob(['gen1'], { type: 'image/png' }),
+          imageURL: 'https://cdn.example/1.png',
+          width: 512,
+          height: 512,
+          format: 'PNG',
+          model: 'bfl:2@1',
+          prompt: 'portrait edit',
+          seed: 1,
+          cost: 0.01,
+          createdAt: 2000,
+        },
+      ],
+    });
+
+    renderAppAt('/pipeline', container);
+
+    const zoomInButtons = await screen.findAllByRole('button', { name: 'Zoom in' });
+    await user.click(zoomInButtons[0]);
+    expect(await screen.findByText('135%')).toBeInTheDocument();
+
+    const focusButtons = screen.getAllByRole('button', { name: 'Focus on face' });
+    await user.click(focusButtons[1]);
+
+    await waitFor(() => {
+      expect(container.faceDetector.detectFaces).toHaveBeenCalledWith(
+        'blob:mock/out-1',
+        'out:out-1',
+      );
+    });
+    expect(await screen.findByText('Face')).toBeInTheDocument();
   });
 });
