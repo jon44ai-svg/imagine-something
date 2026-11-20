@@ -1,3 +1,4 @@
+import { resolveTargetSizing } from '../../domain/modelCapabilities';
 import type {
   GenerationSettings,
   InferenceRequest,
@@ -8,7 +9,7 @@ import type { IGenerationStrategyResolver } from '../../domain/ports/inference';
 import type { IInputImageEncoder, IOutputImageHydrator } from '../../domain/ports/media';
 import type { IClock, IIdGenerator } from '../../domain/ports/runtime';
 import type { IOutputWriter } from '../../domain/ports/storage';
-import { clampNumberResults, computeDimensions } from '../../utils/dimensions';
+import { clampNumberResults } from '../../utils/dimensions';
 
 export class ProcessSingleInputUseCase {
   private readonly inputEncoder: IInputImageEncoder;
@@ -41,22 +42,20 @@ export class ProcessSingleInputUseCase {
     signal?: AbortSignal,
   ): Promise<OutputRecord[]> {
     const inputDataUri = await this.inputEncoder.toInferenceDataUri(input);
-    const dims = computeDimensions(
-      settings.aspectRatio,
-      settings.baseSize,
-      input.width,
-      input.height,
-      settings.customWidth,
-      settings.customHeight,
-    );
+    const sizing = resolveTargetSizing(settings, input.width, input.height);
+    const recordDims =
+      sizing.mode === 'resolution'
+        ? sizing.fallbackDimensions
+        : { width: sizing.width, height: sizing.height };
 
     const request: InferenceRequest = {
       apiKey: apiKey.trim(),
       model: settings.model.trim(),
       positivePrompt: settings.positivePrompt.trim(),
       negativePrompt: settings.negativePrompt,
-      width: dims.width,
-      height: dims.height,
+      width: sizing.mode === 'dimensions' ? sizing.width : undefined,
+      height: sizing.mode === 'dimensions' ? sizing.height : undefined,
+      resolution: sizing.mode === 'resolution' ? sizing.resolution : undefined,
       numberResults: clampNumberResults(settings.numberResults),
       outputType: settings.outputType,
       outputFormat: settings.outputFormat,
@@ -85,8 +84,8 @@ export class ProcessSingleInputUseCase {
         blob,
         imageURL: payload.imageURL || '',
         format: settings.outputFormat,
-        width: dims.width,
-        height: dims.height,
+        width: recordDims.width,
+        height: recordDims.height,
         prompt: request.positivePrompt,
         model: request.model,
         seed: payload.seed !== undefined ? payload.seed : null,

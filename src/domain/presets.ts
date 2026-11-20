@@ -77,6 +77,14 @@ export const MODEL_PRESETS: Record<string, ModelPresetConfig> = {
     acceleration: 'omit',
     inputMode: 'referenceImages',
   },
+  'google:nano-banana@2.1': {
+    id: 'google:nano-banana@2.1',
+    label: 'google:nano-banana@2.1 (Nano Banana 2.1)',
+    steps: '',
+    CFGScale: '',
+    acceleration: 'omit',
+    inputMode: 'referenceImages',
+  },
 };
 
 export const CUSTOM_MODEL_VALUE = '__custom';

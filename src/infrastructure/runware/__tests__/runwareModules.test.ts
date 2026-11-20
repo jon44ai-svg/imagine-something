@@ -77,6 +77,39 @@ describe('Runware task builder & response parser', () => {
     expect(task.inputs).toBeUndefined();
   });
 
+  it('omits unsupported steps/CFGScale/acceleration/negativePrompt/seedImage for google:nano-banana@2.1 and clamps outputQuality to 99', () => {
+    const task = buildImageInferenceTask(
+      makeRequest({
+        model: 'google:nano-banana@2.1',
+        steps: '4',
+        CFGScale: '3.5',
+        acceleration: 'high',
+        negativePrompt: 'blurry',
+        inputMode: 'seedImage',
+        strength: '0.75',
+        outputQuality: 100,
+        width: undefined,
+        height: undefined,
+        resolution: '2K',
+      }),
+      'uuid-nb',
+      'sync',
+    );
+
+    expect(task.model).toBe('google:nano-banana@2.1');
+    expect(task.steps).toBeUndefined();
+    expect(task.CFGScale).toBeUndefined();
+    expect(task.acceleration).toBeUndefined();
+    expect(task.negativePrompt).toBeUndefined();
+    expect(task.seedImage).toBeUndefined();
+    expect(task.strength).toBeUndefined();
+    expect(task.inputs).toEqual({ referenceImages: ['data:image/png;base64,AAAA'] });
+    expect(task.resolution).toBe('2K');
+    expect(task.width).toBeUndefined();
+    expect(task.height).toBeUndefined();
+    expect(task.outputQuality).toBe(99);
+  });
+
   it('builds getResponse polling task', () => {
     expect(buildGetResponseTask('uuid-99')).toEqual({
       taskType: 'getResponse',

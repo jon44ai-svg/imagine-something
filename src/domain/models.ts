@@ -23,6 +23,8 @@ export type OutputDeliveryType = 'dataURI' | 'URL';
 
 export type DeliveryMethod = 'sync' | 'async';
 
+export type ResolutionTier = '1K' | '2K' | '4K';
+
 export interface GenerationSettings {
   model: string;
   positivePrompt: string;
@@ -96,8 +98,9 @@ export interface InferenceRequest {
   model: string;
   positivePrompt: string;
   negativePrompt: string;
-  width: number;
-  height: number;
+  width?: number;
+  height?: number;
+  resolution?: ResolutionTier;
   numberResults: number;
   outputType: OutputDeliveryType;
   outputFormat: OutputFormat;
