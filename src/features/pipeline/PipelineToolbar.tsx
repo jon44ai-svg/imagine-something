@@ -1,6 +1,7 @@
 import { Button, Group, SegmentedControl, Text } from '@mantine/core';
 import { modals } from '@mantine/modals';
 import {
+  IconAspectRatio,
   IconPlayerPlay,
   IconPlayerStop,
   IconRefresh,
@@ -8,6 +9,7 @@ import {
   IconTrash,
 } from '@tabler/icons-react';
 import { useExecution } from '../../app/state/ExecutionContext';
+import { useLightbox } from '../../app/state/LightboxContext';
 import { useQueueData } from '../../app/state/QueueDataContext';
 import type { PipelineFilter } from '../../domain/models';
 
@@ -19,6 +21,7 @@ export interface PipelineToolbarProps {
 export function PipelineToolbar({ activeFilter, onFilterChange }: PipelineToolbarProps) {
   const { inputs, outputs, resetAllToPending, clearOutputs, clearAll } = useQueueData();
   const { isRunning, runPipeline, stopAll, retryFailed } = useExecution();
+  const { openAspectPreview } = useLightbox();
 
   const pendingCount = inputs.filter((item) => item.status === 'pending').length;
   const failedCount = inputs.filter((item) => item.status === 'error').length;
@@ -86,6 +89,17 @@ export function PipelineToolbar({ activeFilter, onFilterChange }: PipelineToolba
             Retry Failed ({failedCount})
           </Button>
         )}
+
+        <Button
+          size="xs"
+          variant="light"
+          color="cyan"
+          leftSection={<IconAspectRatio size={14} />}
+          disabled={inputs.length === 0}
+          onClick={() => openAspectPreview()}
+        >
+          Verify Aspect
+        </Button>
 
         <Button
           size="xs"

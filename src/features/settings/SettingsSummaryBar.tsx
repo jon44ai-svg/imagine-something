@@ -1,36 +1,57 @@
+import { Led } from '@gfazioli/mantine-led';
 import { Badge, Button, Card, Collapse, Group, Stack, Text } from '@mantine/core';
 import { IconAdjustments, IconChevronDown, IconChevronUp } from '@tabler/icons-react';
 import { useNavigate } from 'react-router-dom';
+import { useExecution } from '../../app/state/ExecutionContext';
 import { useSettings } from '../../app/state/SettingsContext';
 import { formatSizingPreview } from '../../domain/modelCapabilities';
+import { useModelLibrary } from './useModelLibrary';
 
 export function SettingsSummaryBar() {
-  const { settings, toggleSettingsHidden } = useSettings();
+  const { settings, apiKey, toggleSettingsHidden } = useSettings();
+  const { isRunning } = useExecution();
+  const { supportedDimensionsFor } = useModelLibrary();
   const navigate = useNavigate();
 
+  const supportedDims = supportedDimensionsFor(settings.model);
+  const preview = formatSizingPreview(settings, supportedDims);
   const sizeLabel =
-    settings.aspectRatio === 'custom' || settings.aspectRatio === 'match'
-      ? formatSizingPreview(settings)
-      : `${settings.aspectRatio} | ${formatSizingPreview(settings)}`;
+    supportedDims.length > 0 || settings.aspectRatio === 'custom' || settings.aspectRatio === 'match'
+      ? preview
+      : `${settings.aspectRatio} | ${preview}`;
 
   return (
     <Card withBorder padding="sm" radius="md">
       <Stack gap="xs">
         <Group justify="space-between" wrap="wrap" gap="xs">
           <Group gap="xs" wrap="wrap" style={{ flex: 1, minWidth: 0 }}>
-            <Badge variant="default" size="sm">
+            <Led
+              variant="neon"
+              size={10}
+              color={isRunning ? 'cyan' : apiKey.trim() ? 'teal' : 'yellow'}
+              animate={isRunning}
+              animationType="pulse"
+              tooltip={
+                isRunning
+                  ? 'Pipeline active'
+                  : apiKey.trim()
+                    ? 'Runware API armed'
+                    : 'API key missing'
+              }
+            />
+            <Badge variant="default" size="sm" className="cyber-mono">
               {settings.model || 'No model'}
             </Badge>
-            <Badge variant="default" size="sm">
+            <Badge variant="default" size="sm" className="cyber-mono">
               {sizeLabel}
             </Badge>
-            <Badge variant="default" size="sm">
+            <Badge variant="default" size="sm" className="cyber-mono">
               {settings.numberResults} / img
             </Badge>
-            <Badge variant="default" size="sm">
+            <Badge variant="default" size="sm" className="cyber-mono">
               {settings.outputFormat} {settings.outputQuality}%
             </Badge>
-            <Badge variant="light" color="indigo" size="sm">
+            <Badge variant="light" color="cyan" size="sm" className="cyber-mono">
               {settings.deliveryMethod.toUpperCase()} &bull; {settings.concurrency}x
             </Badge>
           </Group>
