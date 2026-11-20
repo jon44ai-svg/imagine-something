@@ -343,4 +343,102 @@ describe('SPA UI flows (Settings & Lightbox)', () => {
     await user.click(screen.getByRole('button', { name: 'Remove meta:muse@image from favorites' }));
     expect(screen.queryByRole('button', { name: 'Remove meta:muse@image from favorites' })).not.toBeInTheDocument();
   });
+
+  it('shows saved resolutions and Infer/Fixed toggle for meta:muse@image and opens Aspect Compatibility Preview', async () => {
+    window.localStorage.clear();
+    const user = userEvent.setup();
+    const container = createStubContainer({
+      settings: { model: 'meta:muse@image', resolutionMode: 'infer' },
+      inputs: [
+        {
+          id: 'in-wide',
+          name: 'landscape.png',
+          type: 'image/png',
+          blob: new Blob(['orig'], { type: 'image/png' }),
+          width: 1920,
+          height: 1280,
+          status: 'pending',
+          error: '',
+          order: 0,
+          createdAt: 1000,
+        },
+      ],
+    });
+
+    renderAppAt('/settings', container);
+    expect(await screen.findByText('8 saved sizes')).toBeInTheDocument();
+    expect(screen.getByText('Infer (8 sizes)')).toBeInTheDocument();
+
+    await user.click(screen.getByText('Fixed Resolution'));
+    expect(await screen.findByText('1600x1600 (Fixed)')).toBeInTheDocument();
+
+    // Switch to Pipeline and open Aspect Compatibility Preview
+    await user.click(screen.getByText('Pipeline'));
+    expect(await screen.findByText('landscape.png')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: /Verify Aspect/i }));
+    expect(await screen.findByText(/Aspect-Ratio Compatibility Preview/i)).toBeInTheDocument();
+    expect(screen.getByText('Target Ratio Fit')).toBeInTheDocument();
+  });
+
+  it('supports Compare Slider, Spotlight Loupe in Lightbox and opens Command Spotlight', async () => {
+    const user = userEvent.setup();
+    const container = createStubContainer({
+      inputs: [
+        {
+          id: 'in-c1',
+          name: 'studio.png',
+          type: 'image/png',
+          blob: new Blob(['orig'], { type: 'image/png' }),
+          width: 1024,
+          height: 1024,
+          status: 'done',
+          error: '',
+          order: 0,
+          createdAt: 1000,
+        },
+      ],
+      outputs: [
+        {
+          id: 'out-c1',
+          inputId: 'in-c1',
+          inputName: 'studio.png',
+          blob: new Blob(['gen'], { type: 'image/webp' }),
+          imageURL: '',
+          prompt: 'neon cyber studio',
+          model: 'meta:muse@image',
+          width: 1600,
+          height: 1600,
+          format: 'WEBP',
+          seed: 42,
+          cost: 0.002,
+          durationMs: 2400,
+          createdAt: 2000,
+        },
+      ],
+    });
+
+    renderAppAt('/gallery', container);
+    const thumb = await screen.findByAltText('studio.png');
+
+    await user.click(thumb);
+    expect(await screen.findByText('studio.png (1 / 1)')).toBeInTheDocument();
+
+    // Toggle Spotlight Loupe in inspect mode
+    await user.click(screen.getByRole('button', { name: 'Loupe' }));
+    expect(screen.getByRole('button', { name: 'Loupe: On' })).toBeInTheDocument();
+
+    // Switch to Compare Slider (@gfazioli/mantine-compare)
+    await user.click(screen.getByRole('button', { name: 'Compare Slider' }));
+    expect(screen.getByRole('button', { name: 'Compare Slider: On' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Mode: Drag' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Angle: 0/i })).toBeInTheDocument();
+
+    // Close lightbox via Escape
+    await user.keyboard('{Escape}');
+    expect(screen.queryByText('studio.png (1 / 1)')).not.toBeInTheDocument();
+
+    // Open Command Spotlight via HUD button
+    await user.click(screen.getByRole('button', { name: /Commands/i }));
+    expect(await screen.findByPlaceholderText(/Search commands/i)).toBeInTheDocument();
+  });
 });

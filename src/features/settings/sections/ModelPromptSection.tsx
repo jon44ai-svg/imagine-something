@@ -6,7 +6,6 @@ import {
   Button,
   Card,
   CloseButton,
-  Collapse,
   Grid,
   Group,
   Select,
@@ -150,33 +149,32 @@ export function ModelPromptSection() {
           </Button>
         </Group>
 
-        <Collapse expanded={deckOpen}>
-          {deckOpen && (
-            <Box
-              py="md"
-              px="xs"
-              style={{
-                display: 'flex',
-                justifyContent: 'center',
-                borderRadius: 10,
-                background: 'rgba(6, 11, 22, 0.72)',
-                border: '1px solid rgba(56, 189, 248, 0.16)',
-              }}
-            >
-              <DepthSelect
-                ariaLabel="3D Model Deck"
-                data={deckItems}
-                value={settings.model}
-                onChange={(val) => selectModelId(String(val))}
-                w={380}
-                h={126}
-                visibleCards={4}
-                translateYStep={18}
-                loop
-              />
-            </Box>
-          )}
-        </Collapse>
+        {deckOpen && (
+          <Box
+            pt={64}
+            pb="md"
+            px="xs"
+            style={{
+              display: 'flex',
+              justifyContent: 'center',
+              borderRadius: 10,
+              background: 'rgba(6, 11, 22, 0.72)',
+              border: '1px solid rgba(56, 189, 248, 0.16)',
+            }}
+          >
+            <DepthSelect
+              ariaLabel="3D Model Deck"
+              data={deckItems}
+              value={settings.model}
+              onChange={(val) => selectModelId(String(val))}
+              w={380}
+              h={126}
+              visibleCards={4}
+              translateYStep={18}
+              loop
+            />
+          </Box>
+        )}
 
         <Grid>
           <Grid.Col span={{ base: 12, sm: 5 }}>
