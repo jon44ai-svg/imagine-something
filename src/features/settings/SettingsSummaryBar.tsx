@@ -2,21 +2,16 @@ import { Badge, Button, Card, Collapse, Group, Stack, Text } from '@mantine/core
 import { IconAdjustments, IconChevronDown, IconChevronUp } from '@tabler/icons-react';
 import { useNavigate } from 'react-router-dom';
 import { useSettings } from '../../app/state/SettingsContext';
-import { computeDimensions, round64 } from '../../utils/dimensions';
+import { formatSizingPreview } from '../../domain/modelCapabilities';
 
 export function SettingsSummaryBar() {
   const { settings, toggleSettingsHidden } = useSettings();
   const navigate = useNavigate();
 
-  let sizeLabel: string;
-  if (settings.aspectRatio === 'match') {
-    sizeLabel = `Match Input | ${settings.baseSize}px`;
-  } else if (settings.aspectRatio === 'custom') {
-    sizeLabel = `${round64(settings.customWidth)}x${round64(settings.customHeight)}`;
-  } else {
-    const dims = computeDimensions(settings.aspectRatio, settings.baseSize);
-    sizeLabel = `${settings.aspectRatio} | ${dims.width}x${dims.height}`;
-  }
+  const sizeLabel =
+    settings.aspectRatio === 'custom' || settings.aspectRatio === 'match'
+      ? formatSizingPreview(settings)
+      : `${settings.aspectRatio} | ${formatSizingPreview(settings)}`;
 
   return (
     <Card withBorder padding="sm" radius="md">

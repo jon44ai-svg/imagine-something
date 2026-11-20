@@ -11,32 +11,21 @@ import {
   Title,
 } from '@mantine/core';
 import { useSettings } from '../../../app/state/SettingsContext';
+import { formatSizingPreview, resolveModelCapabilities } from '../../../domain/modelCapabilities';
 import type { AspectRatio, OutputFormat } from '../../../domain/models';
 import {
   ASPECT_RATIO_OPTIONS,
   BASE_SIZE_OPTIONS,
   OUTPUT_FORMAT_OPTIONS,
 } from '../../../domain/presets';
-import { clampNumberResults, computeDimensions, round64 } from '../../../utils/dimensions';
+import { clampNumberResults, round64 } from '../../../utils/dimensions';
 
 export function DimensionsOutputSection() {
   const { settings, updateSettings } = useSettings();
 
+  const capabilities = resolveModelCapabilities(settings.model);
   const isCustom = settings.aspectRatio === 'custom';
-  const dimPreview =
-    settings.aspectRatio === 'match'
-      ? `Auto (max ${settings.baseSize}px)`
-      : (() => {
-          const d = computeDimensions(
-            settings.aspectRatio,
-            settings.baseSize,
-            1024,
-            1024,
-            settings.customWidth,
-            settings.customHeight,
-          );
-          return `${d.width} x ${d.height}`;
-        })();
+  const dimPreview = formatSizingPreview(settings);
 
   return (
     <Card withBorder padding="md" radius="md">
@@ -45,7 +34,9 @@ export function DimensionsOutputSection() {
           <div>
             <Title order={5}>Dimensions &amp; Output</Title>
             <Text size="xs" c="dimmed">
-              All output dimensions snap to multiples of 64 (128–2048 px)
+              {capabilities.dimensionMode === 'googleNanoBanana'
+                ? 'Automatically maps to Google Nano Banana supported resolutions (1K / 2K / 4K)'
+                : 'All output dimensions snap to multiples of 64 (128–2048 px)'}
             </Text>
           </div>
           <Badge variant="light" color="indigo" size="md">

@@ -55,6 +55,7 @@ export function ModelPromptSection() {
               onChange={(val) => {
                 if (!val) return;
                 if (val === CUSTOM_MODEL_VALUE) {
+                  updateSettings({ steps: '', CFGScale: '', acceleration: 'omit' });
                   modelInputRef.current?.focus();
                 } else {
                   applyModelPreset(val);
@@ -66,9 +67,16 @@ export function ModelPromptSection() {
             <TextInput
               ref={modelInputRef}
               label="Model (AIR ID)"
-              placeholder="e.g. runware:400@6"
+              placeholder="e.g. runware:400@6 or google:nano-banana@2.1"
               value={settings.model}
-              onChange={(event) => updateSettings({ model: event.currentTarget.value.trim() })}
+              onChange={(event) => {
+                const nextModel = event.currentTarget.value.trim();
+                if (Object.prototype.hasOwnProperty.call(MODEL_PRESETS, nextModel)) {
+                  applyModelPreset(nextModel);
+                } else {
+                  updateSettings({ model: nextModel });
+                }
+              }}
             />
           </Grid.Col>
         </Grid>
