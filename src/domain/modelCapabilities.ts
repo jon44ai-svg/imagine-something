@@ -1,4 +1,9 @@
 import { computeDimensions, round64 } from '../utils/dimensions';
+import {
+  formatDimensionKey,
+  parseDimensionKey,
+  pickClosestSupportedDimension,
+} from './modelLibrary';
 import type { AspectRatio, GenerationSettings, ImageDimensions, ResolutionTier } from './models';
 
 export interface ModelCapabilities {
@@ -112,10 +117,42 @@ export function resolveTargetSizing(
   settings: Pick<
     GenerationSettings,
     'model' | 'aspectRatio' | 'baseSize' | 'customWidth' | 'customHeight'
-  >,
+  > &
+    Partial<Pick<GenerationSettings, 'resolutionMode' | 'fixedResolution'>>,
   inputWidth?: number,
   inputHeight?: number,
+  supportedDimensions?: readonly ImageDimensions[],
 ): ResolvedTargetSizing {
+  if (supportedDimensions && supportedDimensions.length > 0) {
+    if (settings.resolutionMode === 'fixed' && settings.fixedResolution) {
+      const parsed = parseDimensionKey(settings.fixedResolution);
+      const exact = parsed
+        ? supportedDimensions.find(
+            (d) => d.width === parsed.width && d.height === parsed.height,
+          )
+        : undefined;
+      if (exact) {
+        return {
+          mode: 'dimensions',
+          width: exact.width,
+          height: exact.height,
+        };
+      }
+    }
+
+    const chosen = pickClosestSupportedDimension(
+      supportedDimensions,
+      inputWidth,
+      inputHeight,
+      settings.baseSize,
+    );
+    return {
+      mode: 'dimensions',
+      width: chosen.width,
+      height: chosen.height,
+    };
+  }
+
   const capabilities = resolveModelCapabilities(settings.model);
 
   if (capabilities.dimensionMode === 'googleNanoBanana') {
@@ -173,8 +210,25 @@ export function formatSizingPreview(
   settings: Pick<
     GenerationSettings,
     'model' | 'aspectRatio' | 'baseSize' | 'customWidth' | 'customHeight'
-  >,
+  > &
+    Partial<Pick<GenerationSettings, 'resolutionMode' | 'fixedResolution'>>,
+  supportedDimensions?: readonly ImageDimensions[],
 ): string {
+  if (supportedDimensions && supportedDimensions.length > 0) {
+    if (settings.resolutionMode === 'fixed' && settings.fixedResolution) {
+      const parsed = parseDimensionKey(settings.fixedResolution);
+      const exact = parsed
+        ? supportedDimensions.find(
+            (d) => d.width === parsed.width && d.height === parsed.height,
+          )
+        : undefined;
+      if (exact) {
+        return `${formatDimensionKey(exact)} (Fixed)`;
+      }
+    }
+    return `Infer (${supportedDimensions.length} sizes)`;
+  }
+
   const resolved = resolveTargetSizing(settings, 1024, 1024);
   if (resolved.mode === 'resolution') {
     return `Match Input (${resolved.resolution})`;

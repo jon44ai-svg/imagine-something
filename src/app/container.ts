@@ -111,6 +111,7 @@ export function createAppContainer(): AppContainer {
     outputStore,
     idGenerator,
     clock,
+    modelLibrary,
   );
 
   return {

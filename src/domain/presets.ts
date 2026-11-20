@@ -44,6 +44,8 @@ export const DEFAULT_SETTINGS: GenerationSettings = {
   asyncPollIntervalMs: 1500,
   asyncTimeoutMs: 180000,
   showGenerationTime: true,
+  resolutionMode: 'infer',
+  fixedResolution: '',
 };
 
 export const MODEL_PRESETS: Record<string, ModelPresetConfig> = {

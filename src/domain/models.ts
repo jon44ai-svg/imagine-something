@@ -25,6 +25,8 @@ export type DeliveryMethod = 'sync' | 'async';
 
 export type ResolutionTier = '1K' | '2K' | '4K';
 
+export type ResolutionMode = 'infer' | 'fixed';
+
 export interface NormalizedRect {
   x: number;
   y: number;
@@ -69,6 +71,8 @@ export interface GenerationSettings {
   asyncPollIntervalMs: number;
   asyncTimeoutMs: number;
   showGenerationTime: boolean;
+  resolutionMode: ResolutionMode;
+  fixedResolution: string;
 }
 
 export interface ModelPresetConfig {
@@ -122,6 +126,8 @@ export interface InferenceRequest {
   negativePrompt: string;
   width?: number;
   height?: number;
+  inputWidth?: number;
+  inputHeight?: number;
   resolution?: ResolutionTier;
   numberResults: number;
   outputType: OutputDeliveryType;
@@ -144,6 +150,8 @@ export interface InferenceOutputPayload {
   imageURL?: string;
   seed?: number | string | null;
   cost?: number | null;
+  width?: number;
+  height?: number;
 }
 
 export interface SubmittedJob {

@@ -1,11 +1,15 @@
 import {
   blockedParametersFor,
   DEFAULT_MODEL_LIBRARY,
+  forgetModelKnowledge,
   mergeModelLibrary,
+  supportedDimensionsFor,
   withBlockedParameter,
   withFavorite,
+  withSupportedDimensions,
   type ModelLibrary,
 } from '../../domain/modelLibrary';
+import type { ImageDimensions } from '../../domain/models';
 import type { IModelLibraryReader, IModelLibraryWriter } from '../../domain/ports/modelLibrary';
 import { LS_MODEL_LIBRARY_KEY } from '../../domain/presets';
 
@@ -29,6 +33,10 @@ export class LocalStorageModelLibraryStore implements IModelLibraryReader, IMode
     return blockedParametersFor(this.library, modelId);
   }
 
+  supportedDimensionsFor(modelId: string): readonly ImageDimensions[] {
+    return supportedDimensionsFor(this.library, modelId);
+  }
+
   subscribe(listener: (library: ModelLibrary) => void): () => void {
     this.listeners.add(listener);
     return () => {
@@ -38,6 +46,18 @@ export class LocalStorageModelLibraryStore implements IModelLibraryReader, IMode
 
   rememberBlocked(modelId: string, parameter: string): void {
     const next = withBlockedParameter(this.library, modelId, parameter);
+    if (next === this.library) return;
+    this.commit(next);
+  }
+
+  rememberSupportedDimensions(modelId: string, dimensions: readonly ImageDimensions[]): void {
+    const next = withSupportedDimensions(this.library, modelId, dimensions);
+    if (next === this.library) return;
+    this.commit(next);
+  }
+
+  clearModelKnowledge(modelId: string): void {
+    const next = forgetModelKnowledge(this.library, modelId);
     if (next === this.library) return;
     this.commit(next);
   }

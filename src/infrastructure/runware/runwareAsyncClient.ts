@@ -32,9 +32,17 @@ export class RunwareAsyncClient implements IAsyncJobSubmitter, IAsyncJobPoller {
       signal,
     );
     const immediateOutputs = parseAsyncSubmitResponse(result.payload, result.taskUUID);
+    const hydratedImmediate =
+      immediateOutputs && result.resolvedWidth && result.resolvedHeight
+        ? immediateOutputs.map((o) => ({
+            ...o,
+            width: o.width ?? result.resolvedWidth,
+            height: o.height ?? result.resolvedHeight,
+          }))
+        : immediateOutputs;
     return {
       taskUUID: result.taskUUID,
-      immediateOutputs,
+      immediateOutputs: hydratedImmediate,
     };
   }
 

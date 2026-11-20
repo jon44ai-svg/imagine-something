@@ -33,6 +33,14 @@ export class RunwareSyncClient implements ISyncInferenceClient {
       this.modelLibrary,
       signal,
     );
-    return parseSyncInferenceResponse(result.payload);
+    const outputs = parseSyncInferenceResponse(result.payload);
+    if (result.resolvedWidth && result.resolvedHeight) {
+      return outputs.map((o) => ({
+        ...o,
+        width: o.width ?? result.resolvedWidth,
+        height: o.height ?? result.resolvedHeight,
+      }));
+    }
+    return outputs;
   }
 }

@@ -51,13 +51,26 @@ describe('LocalStorage stores (backwards-compatible keys)', () => {
   it('persists favorite models and parameters learned from API errors', () => {
     const store = new LocalStorageModelLibraryStore();
     expect(store.blockedFor('meta:muse@image')).toEqual(['steps']);
+    expect(store.supportedDimensionsFor('meta:muse@image')).toHaveLength(8);
 
     store.setFavorite('meta:muse@image', true);
     store.rememberBlocked('custom:model@2', 'CFGScale');
+    store.rememberSupportedDimensions('custom:model@2', [
+      { width: 1600, height: 1600 },
+      { width: 1920, height: 1280 },
+    ]);
 
     const reloaded = new LocalStorageModelLibraryStore();
     expect(reloaded.snapshot().favorites).toEqual(['meta:muse@image']);
     expect(reloaded.blockedFor('custom:model@2')).toEqual(['CFGScale']);
+    expect(reloaded.supportedDimensionsFor('custom:model@2')).toEqual([
+      { width: 1600, height: 1600 },
+      { width: 1920, height: 1280 },
+    ]);
     expect(window.localStorage.getItem(LS_MODEL_LIBRARY_KEY)).toContain('custom:model@2');
+
+    reloaded.clearModelKnowledge('custom:model@2');
+    expect(reloaded.blockedFor('custom:model@2')).toEqual([]);
+    expect(reloaded.supportedDimensionsFor('custom:model@2')).toEqual([]);
   });
 });

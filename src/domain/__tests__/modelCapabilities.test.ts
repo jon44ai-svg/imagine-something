@@ -80,4 +80,50 @@ describe('modelCapabilities', () => {
     });
     expect(sizing1x1).toEqual({ mode: 'dimensions', width: 1024, height: 1024 });
   });
+
+  it('resolves inferred or fixed dimensions when a model has a discrete supported dimension list', () => {
+    const allowed = [
+      { width: 1600, height: 1600 },
+      { width: 1920, height: 1280 },
+      { width: 1280, height: 1920 },
+    ];
+
+    const inferred = resolveTargetSizing(
+      { ...DEFAULT_SETTINGS, model: 'meta:muse@image', resolutionMode: 'infer' },
+      800,
+      1200,
+      allowed,
+    );
+    expect(inferred).toEqual({ mode: 'dimensions', width: 1280, height: 1920 });
+    expect(
+      formatSizingPreview(
+        { ...DEFAULT_SETTINGS, model: 'meta:muse@image', resolutionMode: 'infer' },
+        allowed,
+      ),
+    ).toBe('Infer (3 sizes)');
+
+    const fixed = resolveTargetSizing(
+      {
+        ...DEFAULT_SETTINGS,
+        model: 'meta:muse@image',
+        resolutionMode: 'fixed',
+        fixedResolution: '1920x1280',
+      },
+      800,
+      1200,
+      allowed,
+    );
+    expect(fixed).toEqual({ mode: 'dimensions', width: 1920, height: 1280 });
+    expect(
+      formatSizingPreview(
+        {
+          ...DEFAULT_SETTINGS,
+          model: 'meta:muse@image',
+          resolutionMode: 'fixed',
+          fixedResolution: '1920x1280',
+        },
+        allowed,
+      ),
+    ).toBe('1920x1280 (Fixed)');
+  });
 });

@@ -7,6 +7,7 @@ import type {
 } from '../../domain/models';
 import type { IGenerationStrategyResolver } from '../../domain/ports/inference';
 import type { IInputImageEncoder, IOutputImageHydrator } from '../../domain/ports/media';
+import type { IModelLibraryReader } from '../../domain/ports/modelLibrary';
 import type { IClock, IIdGenerator } from '../../domain/ports/runtime';
 import type { IOutputWriter } from '../../domain/ports/storage';
 import { clampNumberResults } from '../../utils/dimensions';
@@ -18,6 +19,7 @@ export class ProcessSingleInputUseCase {
   private readonly outputWriter: IOutputWriter;
   private readonly idGenerator: IIdGenerator;
   private readonly clock: IClock;
+  private readonly modelLibrary: IModelLibraryReader | undefined;
 
   constructor(
     inputEncoder: IInputImageEncoder,
@@ -26,6 +28,7 @@ export class ProcessSingleInputUseCase {
     outputWriter: IOutputWriter,
     idGenerator: IIdGenerator,
     clock: IClock,
+    modelLibrary?: IModelLibraryReader,
   ) {
     this.inputEncoder = inputEncoder;
     this.strategyResolver = strategyResolver;
@@ -33,6 +36,7 @@ export class ProcessSingleInputUseCase {
     this.outputWriter = outputWriter;
     this.idGenerator = idGenerator;
     this.clock = clock;
+    this.modelLibrary = modelLibrary;
   }
 
   async execute(
@@ -42,7 +46,8 @@ export class ProcessSingleInputUseCase {
     signal?: AbortSignal,
   ): Promise<OutputRecord[]> {
     const inputDataUri = await this.inputEncoder.toInferenceDataUri(input);
-    const sizing = resolveTargetSizing(settings, input.width, input.height);
+    const supportedDimensions = this.modelLibrary?.supportedDimensionsFor(settings.model);
+    const sizing = resolveTargetSizing(settings, input.width, input.height, supportedDimensions);
     const recordDims =
       sizing.mode === 'resolution'
         ? sizing.fallbackDimensions
@@ -55,6 +60,8 @@ export class ProcessSingleInputUseCase {
       negativePrompt: settings.negativePrompt,
       width: sizing.mode === 'dimensions' ? sizing.width : undefined,
       height: sizing.mode === 'dimensions' ? sizing.height : undefined,
+      inputWidth: input.width,
+      inputHeight: input.height,
       resolution: sizing.mode === 'resolution' ? sizing.resolution : undefined,
       numberResults: clampNumberResults(settings.numberResults),
       outputType: settings.outputType,
@@ -86,8 +93,8 @@ export class ProcessSingleInputUseCase {
         blob,
         imageURL: payload.imageURL || '',
         format: settings.outputFormat,
-        width: recordDims.width,
-        height: recordDims.height,
+        width: payload.width ?? recordDims.width,
+        height: payload.height ?? recordDims.height,
         prompt: request.positivePrompt,
         model: request.model,
         seed: payload.seed !== undefined ? payload.seed : null,

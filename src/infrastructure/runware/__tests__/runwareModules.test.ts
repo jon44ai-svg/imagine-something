@@ -256,6 +256,61 @@ describe('RunwareSyncClient & RunwareAsyncClient', () => {
     expect(secondBody[0].steps).toBeUndefined();
   });
 
+  it('learns supported width/height dimensions from Runware error, retries with closest match, and persists them', async () => {
+    window.localStorage.clear();
+    const library = new LocalStorageModelLibraryStore();
+    const fetchMock = vi
+      .fn<typeof fetch>()
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            errors: [
+              {
+                message:
+                  "Unsupported use of width/height parameters. The specified dimensions are not supported for the selected model. Supported values are: '1600x1600', '1920x1280', '1280x1920'.",
+              },
+            ],
+          }),
+          { status: 400 },
+        ),
+      )
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            data: [{ taskType: 'imageInference', imageDataURI: 'data:image/jpeg;base64,QQ==' }],
+          }),
+          { status: 200 },
+        ),
+      );
+
+    const transport = new RunwareHttpTransport('https://api.runware.ai/v1', fetchMock);
+    let n = 0;
+    const client = new RunwareSyncClient(transport, { next: () => `uuid-${++n}` }, library);
+    const result = await client.generateSync(
+      makeRequest({
+        model: 'custom:fixed-dims@1',
+        width: 1024,
+        height: 1024,
+        inputWidth: 1500,
+        inputHeight: 1000,
+      }),
+    );
+
+    expect(result[0].width).toBe(1920);
+    expect(result[0].height).toBe(1280);
+    expect(library.supportedDimensionsFor('custom:fixed-dims@1')).toEqual([
+      { width: 1600, height: 1600 },
+      { width: 1920, height: 1280 },
+      { width: 1280, height: 1920 },
+    ]);
+    const secondBody = JSON.parse(String(fetchMock.mock.calls[1][1]?.body)) as Array<{
+      width?: number;
+      height?: number;
+    }>;
+    expect(secondBody[0].width).toBe(1920);
+    expect(secondBody[0].height).toBe(1280);
+  });
+
   it('submits async job and polls getResponse', async () => {
     const fetchMock = vi
       .fn<typeof fetch>()
