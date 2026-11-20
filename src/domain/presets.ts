@@ -17,6 +17,7 @@ export const RUNWARE_API_ENDPOINT = 'https://api.runware.ai/v1';
 // Exact legacy keys preserved for 100% backwards compatibility
 export const LS_API_KEY = 'runware_i2i_api_key';
 export const LS_SETTINGS_KEY = 'runware_i2i_settings_v1';
+export const LS_MODEL_LIBRARY_KEY = 'runware_i2i_model_library_v1';
 export const IDB_NAME = 'RunwareI2IPipelineDB';
 export const IDB_VERSION = 1;
 

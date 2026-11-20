@@ -5,6 +5,7 @@ import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { describe, expect, it, vi } from 'vitest';
 import type { AppContainer } from '../../app/container';
+import { LocalStorageModelLibraryStore } from '../../infrastructure/storage/localStorageModelLibraryStore';
 import { AppRoutes } from '../../app/router';
 import { ServicesProvider } from '../../app/ServicesContext';
 import { ExecutionProvider } from '../../app/state/ExecutionContext';
@@ -32,6 +33,7 @@ function createStubContainer(initial?: {
         settings = { ...next };
       },
     },
+    modelLibrary: new LocalStorageModelLibraryStore(),
     credentialReader: { getApiKey: async () => apiKey },
     credentialWriter: {
       setApiKey: async (key) => {
@@ -320,5 +322,22 @@ describe('SPA UI flows (Settings & Lightbox)', () => {
     await user.click(screen.getByText('Outputs Gallery'));
     expect(await screen.findByText('cat.png')).toBeInTheDocument();
     expect(screen.queryByText('4.3s')).not.toBeInTheDocument();
+  });
+
+  it('saves, selects, and removes a favorite model from settings', async () => {
+    window.localStorage.clear();
+    const user = userEvent.setup();
+    const container = createStubContainer();
+    renderAppAt('/settings', container);
+    expect(await screen.findByText('Generation Settings')).toBeInTheDocument();
+
+    const modelInput = screen.getByLabelText('Model (AIR ID)');
+    await user.clear(modelInput);
+    await user.type(modelInput, 'meta:muse@image');
+    await user.click(screen.getByRole('button', { name: 'Add favorite model' }));
+
+    expect(await screen.findByText('meta:muse@image')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Remove meta:muse@image from favorites' }));
+    expect(screen.queryByRole('button', { name: 'Remove meta:muse@image from favorites' })).not.toBeInTheDocument();
   });
 });

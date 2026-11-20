@@ -1,36 +1,39 @@
 import type { InferenceRequest, PollOutcome, SubmittedJob } from '../../domain/models';
 import type { IAsyncJobPoller, IAsyncJobSubmitter } from '../../domain/ports/inference';
+import type { IModelLibraryReader, IModelLibraryWriter } from '../../domain/ports/modelLibrary';
 import type { IIdGenerator } from '../../domain/ports/runtime';
+import { submitImageInferenceAdaptively } from './runwareAdaptiveSubmit';
 import type { RunwareHttpTransport } from './runwareHttpTransport';
-import {
-  extractRunwareError,
-  parseAsyncPollResponse,
-  parseAsyncSubmitResponse,
-} from './runwareResponseParser';
-import { buildGetResponseTask, buildImageInferenceTask } from './runwareTaskBuilder';
+import { extractRunwareError, parseAsyncPollResponse, parseAsyncSubmitResponse } from './runwareResponseParser';
+import { buildGetResponseTask } from './runwareTaskBuilder';
 
 export class RunwareAsyncClient implements IAsyncJobSubmitter, IAsyncJobPoller {
   private readonly transport: RunwareHttpTransport;
   private readonly idGenerator: IIdGenerator;
+  private readonly modelLibrary: (IModelLibraryReader & IModelLibraryWriter) | undefined;
 
-  constructor(transport: RunwareHttpTransport, idGenerator: IIdGenerator) {
+  constructor(
+    transport: RunwareHttpTransport,
+    idGenerator: IIdGenerator,
+    modelLibrary?: IModelLibraryReader & IModelLibraryWriter,
+  ) {
     this.transport = transport;
     this.idGenerator = idGenerator;
+    this.modelLibrary = modelLibrary;
   }
 
   async submitAsync(request: InferenceRequest, signal?: AbortSignal): Promise<SubmittedJob> {
-    const taskUUID = this.idGenerator.next();
-    const task = buildImageInferenceTask(request, taskUUID, 'async');
-    const result = await this.transport.postTasks([task], request.apiKey, signal);
-
-    const apiError = extractRunwareError(result.payload, result.status, result.ok);
-    if (apiError) {
-      throw new Error(apiError);
-    }
-
-    const immediateOutputs = parseAsyncSubmitResponse(result.payload, taskUUID);
+    const result = await submitImageInferenceAdaptively(
+      this.transport,
+      this.idGenerator,
+      request,
+      'async',
+      this.modelLibrary,
+      signal,
+    );
+    const immediateOutputs = parseAsyncSubmitResponse(result.payload, result.taskUUID);
     return {
-      taskUUID,
+      taskUUID: result.taskUUID,
       immediateOutputs,
     };
   }

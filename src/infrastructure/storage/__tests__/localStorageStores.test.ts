@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest';
-import { DEFAULT_SETTINGS, LS_API_KEY, LS_SETTINGS_KEY } from '../../../domain/presets';
+import { DEFAULT_SETTINGS, LS_API_KEY, LS_MODEL_LIBRARY_KEY, LS_SETTINGS_KEY } from '../../../domain/presets';
 import { LocalStorageCredentialStore } from '../localStorageCredentialStore';
+import { LocalStorageModelLibraryStore } from '../localStorageModelLibraryStore';
 import { LocalStorageSettingsStore } from '../localStorageSettingsStore';
 
 describe('LocalStorage stores (backwards-compatible keys)', () => {
@@ -45,5 +46,18 @@ describe('LocalStorage stores (backwards-compatible keys)', () => {
     await store.setApiKey('   ');
     expect(window.localStorage.getItem(LS_API_KEY)).toBeNull();
     expect(await store.getApiKey()).toBe('');
+  });
+
+  it('persists favorite models and parameters learned from API errors', () => {
+    const store = new LocalStorageModelLibraryStore();
+    expect(store.blockedFor('meta:muse@image')).toEqual(['steps']);
+
+    store.setFavorite('meta:muse@image', true);
+    store.rememberBlocked('custom:model@2', 'CFGScale');
+
+    const reloaded = new LocalStorageModelLibraryStore();
+    expect(reloaded.snapshot().favorites).toEqual(['meta:muse@image']);
+    expect(reloaded.blockedFor('custom:model@2')).toEqual(['CFGScale']);
+    expect(window.localStorage.getItem(LS_MODEL_LIBRARY_KEY)).toContain('custom:model@2');
   });
 });

@@ -36,9 +36,10 @@ export function buildImageInferenceTask(
   request: InferenceRequest,
   taskUUID: string,
   deliveryMethod: DeliveryMethod,
+  blockedParameters: readonly string[] = [],
 ): RunwareImageInferenceTask {
   const model = request.model.trim();
-  const capabilities = resolveModelCapabilities(model);
+  const capabilities = resolveModelCapabilities(model, blockedParameters);
   const rawQuality = Number(request.outputQuality) || 95;
   const clampedQuality = Math.min(capabilities.maxOutputQuality, Math.max(20, rawQuality));
 

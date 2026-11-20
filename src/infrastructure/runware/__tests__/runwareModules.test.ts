@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import type { InferenceRequest } from '../../../domain/models';
+import { LocalStorageModelLibraryStore } from '../../storage/localStorageModelLibraryStore';
 import { RunwareAsyncClient } from '../runwareAsyncClient';
 import { RunwareHttpTransport } from '../runwareHttpTransport';
 import {
@@ -110,6 +111,17 @@ describe('Runware task builder & response parser', () => {
     expect(task.outputQuality).toBe(99);
   });
 
+  it('omits steps when the model library has learned that the model rejects them', () => {
+    const task = buildImageInferenceTask(
+      makeRequest({ model: 'bytedance:seedream@4', steps: '20', CFGScale: '4' }),
+      'uuid-learned',
+      'sync',
+      ['steps'],
+    );
+    expect(task.steps).toBeUndefined();
+    expect(task.CFGScale).toBe(4);
+  });
+
   it('builds getResponse polling task', () => {
     expect(buildGetResponseTask('uuid-99')).toEqual({
       taskType: 'getResponse',
@@ -202,6 +214,46 @@ describe('RunwareSyncClient & RunwareAsyncClient', () => {
     expect(headers.Authorization).toBe('Bearer rw_test_key');
     expect(result).toHaveLength(1);
     expect(result[0].imageDataURI).toBe('data:image/jpeg;base64,QQ==');
+  });
+
+  it('retries without steps after Runware rejects the parameter and remembers the model', async () => {
+    window.localStorage.clear();
+    const library = new LocalStorageModelLibraryStore();
+    const fetchMock = vi
+      .fn<typeof fetch>()
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            errors: [
+              {
+                message:
+                  "Unsupported use of 'steps' parameter. This parameter is not supported for the selected model.",
+              },
+            ],
+          }),
+          { status: 400 },
+        ),
+      )
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            data: [{ taskType: 'imageInference', imageDataURI: 'data:image/jpeg;base64,QQ==' }],
+          }),
+          { status: 200 },
+        ),
+      );
+
+    const transport = new RunwareHttpTransport('https://api.runware.ai/v1', fetchMock);
+    let n = 0;
+    const client = new RunwareSyncClient(transport, { next: () => `uuid-${++n}` }, library);
+    const result = await client.generateSync(
+      makeRequest({ model: 'bytedance:seedream@4', steps: '20' }),
+    );
+
+    expect(result[0].imageDataURI).toBe('data:image/jpeg;base64,QQ==');
+    expect(library.blockedFor('bytedance:seedream@4')).toEqual(['steps']);
+    const secondBody = JSON.parse(String(fetchMock.mock.calls[1][1]?.body)) as Array<{ steps?: number }>;
+    expect(secondBody[0].steps).toBeUndefined();
   });
 
   it('submits async job and polls getResponse', async () => {

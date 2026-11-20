@@ -1,11 +1,14 @@
-import { Card, Grid, Select, Stack, Text, Textarea, TextInput, Title } from '@mantine/core';
+import { ActionIcon, Badge, Button, Card, CloseButton, Grid, Group, Select, Stack, Text, Textarea, TextInput, Title } from '@mantine/core';
+import { IconStar, IconStarFilled } from '@tabler/icons-react';
 import { useEffect, useMemo, useRef } from 'react';
 import { useSettings } from '../../../app/state/SettingsContext';
 import { CUSTOM_MODEL_VALUE, MODEL_PRESETS } from '../../../domain/presets';
+import { useModelLibrary } from '../useModelLibrary';
 
 export function ModelPromptSection() {
   const { settings, updateSettings, applyModelPreset, requestedFocusField, requestFocusField } =
     useSettings();
+  const { library, isFavorite, setFavorite } = useModelLibrary();
 
   const modelInputRef = useRef<HTMLInputElement | null>(null);
   const promptRef = useRef<HTMLTextAreaElement | null>(null);
@@ -67,8 +70,20 @@ export function ModelPromptSection() {
             <TextInput
               ref={modelInputRef}
               label="Model (AIR ID)"
-              placeholder="e.g. runware:400@6 or google:nano-banana@2.1"
+              placeholder="e.g. runware:400@6, google:nano-banana@2.1, or meta:muse@image"
               value={settings.model}
+              rightSectionPointerEvents="all"
+              rightSection={
+                <ActionIcon
+                  variant="subtle"
+                  color={isFavorite(settings.model) ? 'yellow' : 'gray'}
+                  aria-label={isFavorite(settings.model) ? 'Remove favorite model' : 'Add favorite model'}
+                  disabled={!settings.model.trim()}
+                  onClick={() => setFavorite(settings.model, !isFavorite(settings.model))}
+                >
+                  {isFavorite(settings.model) ? <IconStarFilled size={16} /> : <IconStar size={16} />}
+                </ActionIcon>
+              }
               onChange={(event) => {
                 const nextModel = event.currentTarget.value.trim();
                 if (Object.prototype.hasOwnProperty.call(MODEL_PRESETS, nextModel)) {
@@ -80,6 +95,58 @@ export function ModelPromptSection() {
             />
           </Grid.Col>
         </Grid>
+
+        <Stack gap={6}>
+          <Group justify="space-between">
+            <Text size="sm" fw={500}>
+              Favorite models
+            </Text>
+            <Button
+              size="compact-xs"
+              variant="default"
+              disabled={!settings.model.trim() || isFavorite(settings.model)}
+              onClick={() => setFavorite(settings.model, true)}
+            >
+              Save current model
+            </Button>
+          </Group>
+          {library.favorites.length === 0 ? (
+            <Text size="xs" c="dimmed">
+              Star a model to keep it here. Unsupported parameters such as steps are remembered
+              automatically after Runware rejects them.
+            </Text>
+          ) : (
+            <Group gap={6}>
+              {library.favorites.map((modelId) => (
+                <Badge
+                  key={modelId}
+                  variant={settings.model === modelId ? 'filled' : 'light'}
+                  color="yellow"
+                  style={{ cursor: 'pointer' }}
+                  rightSection={
+                    <CloseButton
+                      size="xs"
+                      aria-label={`Remove ${modelId} from favorites`}
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        setFavorite(modelId, false);
+                      }}
+                    />
+                  }
+                  onClick={() => {
+                    if (Object.prototype.hasOwnProperty.call(MODEL_PRESETS, modelId)) {
+                      applyModelPreset(modelId);
+                    } else {
+                      updateSettings({ model: modelId });
+                    }
+                  }}
+                >
+                  {modelId}
+                </Badge>
+              ))}
+            </Group>
+          )}
+        </Stack>
 
         <Textarea
           ref={promptRef}

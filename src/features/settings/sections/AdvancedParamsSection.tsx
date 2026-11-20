@@ -1,6 +1,7 @@
 import { Accordion, Grid, Select, TextInput } from '@mantine/core';
 import { useSettings } from '../../../app/state/SettingsContext';
 import { resolveModelCapabilities } from '../../../domain/modelCapabilities';
+import { useModelLibrary } from '../useModelLibrary';
 import type { AccelerationMode, InputMode, OutputDeliveryType } from '../../../domain/models';
 import {
   ACCELERATION_OPTIONS,
@@ -10,7 +11,10 @@ import {
 
 export function AdvancedParamsSection() {
   const { settings, updateSettings } = useSettings();
-  const capabilities = resolveModelCapabilities(settings.model);
+  const { blockedFor } = useModelLibrary();
+  const learned = blockedFor(settings.model);
+  const capabilities = resolveModelCapabilities(settings.model, learned);
+  const learnedSteps = learned.includes('steps') && resolveModelCapabilities(settings.model).supportsSteps;
 
   return (
     <Accordion variant="contained" radius="md">
@@ -40,7 +44,11 @@ export function AdvancedParamsSection() {
               <TextInput
                 label="Steps"
                 description={
-                  capabilities.supportsSteps ? 'Blank = omit' : 'Not supported — omitted'
+                  capabilities.supportsSteps
+                    ? 'Blank = omit'
+                    : learnedSteps
+                      ? 'Learned from Runware — omitted on future runs'
+                      : 'Not supported — omitted'
                 }
                 placeholder="4"
                 type="number"

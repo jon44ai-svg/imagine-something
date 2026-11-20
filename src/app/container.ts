@@ -13,6 +13,7 @@ import { ResetQueueUseCase } from '../application/useCases/resetQueueUseCase';
 import { RunBatchPipelineUseCase } from '../application/useCases/runBatchPipelineUseCase';
 import { ValidateRunPreflightUseCase } from '../application/useCases/validateRunPreflightUseCase';
 import type { IObjectUrlRegistry } from '../domain/ports/export';
+import type { IModelLibraryReader, IModelLibraryWriter } from '../domain/ports/modelLibrary';
 import type {
   ICredentialReader,
   ICredentialWriter,
@@ -32,6 +33,7 @@ import { IndexedDbClient } from '../infrastructure/storage/indexedDbClient';
 import { IndexedDbInputStore } from '../infrastructure/storage/indexedDbInputStore';
 import { IndexedDbOutputStore } from '../infrastructure/storage/indexedDbOutputStore';
 import { LocalStorageCredentialStore } from '../infrastructure/storage/localStorageCredentialStore';
+import { LocalStorageModelLibraryStore } from '../infrastructure/storage/localStorageModelLibraryStore';
 import { LocalStorageSettingsStore } from '../infrastructure/storage/localStorageSettingsStore';
 import { CompositeFaceDetector } from '../infrastructure/vision/compositeFaceDetector';
 import { BoundedConcurrencyPool } from '../utils/boundedConcurrencyPool';
@@ -44,6 +46,7 @@ import { StoreZipBuilder } from '../utils/zipBuilder';
 export interface AppContainer {
   settingsReader: ISettingsReader;
   settingsWriter: ISettingsWriter;
+  modelLibrary: IModelLibraryReader & IModelLibraryWriter;
   credentialReader: ICredentialReader;
   credentialWriter: ICredentialWriter;
   inputReader: IInputReader;
@@ -76,6 +79,7 @@ export function createAppContainer(): AppContainer {
 
   // Storage adapters (LocalStorage + IndexedDB — future backend swap point)
   const settingsStore = new LocalStorageSettingsStore();
+  const modelLibrary = new LocalStorageModelLibraryStore();
   const credentialStore = new LocalStorageCredentialStore();
   const dbClient = new IndexedDbClient();
   const inputStore = new IndexedDbInputStore(dbClient);
@@ -91,8 +95,8 @@ export function createAppContainer(): AppContainer {
 
   // Runware inference adapters (sync + async submit/poll — future backend proxy swap point)
   const runwareTransport = new RunwareHttpTransport();
-  const syncClient = new RunwareSyncClient(runwareTransport, idGenerator);
-  const asyncClient = new RunwareAsyncClient(runwareTransport, idGenerator);
+  const syncClient = new RunwareSyncClient(runwareTransport, idGenerator, modelLibrary);
+  const asyncClient = new RunwareAsyncClient(runwareTransport, idGenerator, modelLibrary);
 
   const strategyResolver = new GenerationStrategyResolver({
     sync: new SyncGenerationStrategy(syncClient),
@@ -112,6 +116,7 @@ export function createAppContainer(): AppContainer {
   return {
     settingsReader: settingsStore,
     settingsWriter: settingsStore,
+    modelLibrary,
     credentialReader: credentialStore,
     credentialWriter: credentialStore,
     inputReader: inputStore,

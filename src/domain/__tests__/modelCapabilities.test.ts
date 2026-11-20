@@ -18,6 +18,16 @@ describe('modelCapabilities', () => {
     expect(caps.dimensionMode).toBe('googleNanoBanana');
   });
 
+  it('omits steps for meta:muse@image and for parameters learned from the API', () => {
+    expect(resolveModelCapabilities('meta:muse@image').supportsSteps).toBe(false);
+    expect(resolveModelCapabilities('meta:muse@image').supportsCfgScale).toBe(true);
+
+    const learned = resolveModelCapabilities('runware:400@6', ['steps', 'CFGScale']);
+    expect(learned.supportsSteps).toBe(false);
+    expect(learned.supportsCfgScale).toBe(false);
+    expect(learned.supportsAcceleration).toBe(true);
+  });
+
   it('keeps full diffusion parameters enabled for runware:* models', () => {
     const caps = resolveModelCapabilities('runware:400@6');
     expect(caps.supportsSteps).toBe(true);

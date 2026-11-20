@@ -74,12 +74,32 @@ const NANO_BANANA_DIMENSIONS: Record<ResolutionTier, Record<string, ImageDimensi
   },
 };
 
-export function resolveModelCapabilities(modelId: string): ModelCapabilities {
+const BLOCKED_PARAMETER_FLAGS: Record<string, keyof ModelCapabilities> = {
+  steps: 'supportsSteps',
+  CFGScale: 'supportsCfgScale',
+  acceleration: 'supportsAcceleration',
+  negativePrompt: 'supportsNegativePrompt',
+  seedImage: 'supportsSeedImage',
+  strength: 'supportsSeedImage',
+};
+
+export function resolveModelCapabilities(
+  modelId: string,
+  blockedParameters: readonly string[] = [],
+): ModelCapabilities {
   const normalized = (modelId || '').trim().toLowerCase();
-  if (normalized.startsWith('google:')) {
-    return GOOGLE_NANO_BANANA_CAPABILITIES;
+  let capabilities =
+    normalized.startsWith('google:')
+      ? GOOGLE_NANO_BANANA_CAPABILITIES
+      : normalized === 'meta:muse@image'
+        ? { ...DEFAULT_CAPABILITIES, supportsSteps: false }
+        : DEFAULT_CAPABILITIES;
+
+  for (const parameter of blockedParameters) {
+    const flag = BLOCKED_PARAMETER_FLAGS[parameter];
+    if (flag) capabilities = { ...capabilities, [flag]: false };
   }
-  return DEFAULT_CAPABILITIES;
+  return capabilities;
 }
 
 export function baseSizeToResolutionTier(baseSize: number): ResolutionTier {
