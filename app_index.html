@@ -1,0 +1,2790 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Runware Image-to-Image Batch Pipeline</title>
+  <style>
+    :root {
+      --bg: #0b0d12;
+      --surface: #13161f;
+      --surface-2: #1a1e2a;
+      --surface-3: #232838;
+      --border: #2a3042;
+      --border-hover: #3b445e;
+      --text: #eef1f7;
+      --text-muted: #94a0b8;
+      --text-dim: #667085;
+      --accent: #6366f1;
+      --accent-hover: #7c7ff6;
+      --accent-soft: rgba(99, 102, 241, 0.14);
+      --green: #10b981;
+      --green-soft: rgba(16, 185, 129, 0.14);
+      --red: #f43f5e;
+      --red-soft: rgba(244, 63, 94, 0.14);
+      --radius: 12px;
+      --radius-sm: 8px;
+      --shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Inter, Helvetica, Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.45;
+      min-height: 100vh;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    button, input, select, textarea {
+      font-family: inherit;
+      color: inherit;
+    }
+
+    .topbar {
+      position: sticky;
+      top: 0;
+      z-index: 40;
+      background: rgba(11, 13, 18, 0.9);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+      padding: 12px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      flex-wrap: wrap;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .brand-icon {
+      width: 34px;
+      height: 34px;
+      border-radius: 9px;
+      background: linear-gradient(135deg, #6366f1, #a855f7);
+      display: grid;
+      place-items: center;
+      font-weight: 800;
+      font-size: 16px;
+      color: #fff;
+      box-shadow: 0 4px 14px rgba(99, 102, 241, 0.35);
+    }
+
+    .brand h1 {
+      font-size: 16px;
+      font-weight: 700;
+      letter-spacing: -0.01em;
+    }
+
+    .brand small {
+      display: block;
+      font-size: 11.5px;
+      color: var(--text-muted);
+    }
+
+    .topbar-right {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .stat-pill {
+      font-size: 12px;
+      padding: 5px 10px;
+      border-radius: 999px;
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .stat-pill strong {
+      color: var(--text);
+      font-weight: 600;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 7px;
+      padding: 8px 14px;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border);
+      background: var(--surface-2);
+      color: var(--text);
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background 0.15s, border-color 0.15s, transform 0.1s, opacity 0.15s;
+      white-space: nowrap;
+    }
+
+    .btn:hover:not(:disabled) {
+      background: var(--surface-3);
+      border-color: var(--border-hover);
+    }
+
+    .btn:active:not(:disabled) {
+      transform: translateY(1px);
+    }
+
+    .btn:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+    }
+
+    .btn-primary {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #fff;
+    }
+
+    .btn-primary:hover:not(:disabled) {
+      background: var(--accent-hover);
+      border-color: var(--accent-hover);
+    }
+
+    .btn-danger {
+      background: var(--red-soft);
+      border-color: rgba(244, 63, 94, 0.35);
+      color: #fda4af;
+    }
+
+    .btn-danger:hover:not(:disabled) {
+      background: rgba(244, 63, 94, 0.25);
+      border-color: var(--red);
+      color: #fff;
+    }
+
+    .btn-success {
+      background: var(--green-soft);
+      border-color: rgba(16, 185, 129, 0.35);
+      color: #6ee7b7;
+    }
+
+    .btn-success:hover:not(:disabled) {
+      background: rgba(16, 185, 129, 0.24);
+      border-color: var(--green);
+      color: #fff;
+    }
+
+    .btn-sm {
+      padding: 5px 10px;
+      font-size: 12px;
+      border-radius: 6px;
+    }
+
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 18px 20px 60px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+    }
+
+    .settings-summary {
+      display: none;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 11px 16px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      flex-wrap: wrap;
+    }
+
+    .settings-summary.visible {
+      display: flex;
+    }
+
+    .summary-items {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+      font-size: 12.5px;
+      color: var(--text-muted);
+      min-width: 0;
+      flex: 1;
+    }
+
+    .summary-chip {
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      padding: 3px 9px;
+      border-radius: 6px;
+      color: var(--text);
+      font-weight: 500;
+    }
+
+    .summary-prompt {
+      color: var(--text-muted);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      max-width: 440px;
+      font-style: italic;
+    }
+
+    .settings-panel {
+      padding: 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .settings-panel.hidden {
+      display: none;
+    }
+
+    .settings-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .settings-header h2 {
+      font-size: 14.5px;
+      font-weight: 600;
+    }
+
+    .settings-grid {
+      display: grid;
+      grid-template-columns: repeat(12, 1fr);
+      gap: 14px;
+    }
+
+    .col-12 { grid-column: span 12; }
+    .col-6 { grid-column: span 6; }
+    .col-3 { grid-column: span 3; }
+    .col-2 { grid-column: span 2; }
+
+    @media (max-width: 960px) {
+      .col-6, .col-3, .col-2 { grid-column: span 6; }
+    }
+    @media (max-width: 620px) {
+      .col-6, .col-3, .col-2 { grid-column: span 12; }
+    }
+
+    .field {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .field label {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-muted);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 6px;
+    }
+
+    .field label span.hint {
+      font-weight: 400;
+      color: var(--text-dim);
+      font-size: 11px;
+    }
+
+    .input, select.input, textarea.input {
+      width: 100%;
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 8.5px 11px;
+      font-size: 13px;
+      color: var(--text);
+      outline: none;
+      transition: border-color 0.15s, box-shadow 0.15s;
+    }
+
+    .input:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px var(--accent-soft);
+    }
+
+    textarea.input {
+      min-height: 76px;
+      resize: vertical;
+      line-height: 1.45;
+    }
+
+    .input-row {
+      display: flex;
+      gap: 6px;
+      align-items: center;
+    }
+
+    .input-row .input {
+      flex: 1;
+    }
+
+    details.advanced {
+      background: rgba(255, 255, 255, 0.015);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 10px 14px;
+    }
+
+    details.advanced summary {
+      cursor: pointer;
+      font-size: 12.5px;
+      font-weight: 600;
+      color: var(--text-muted);
+      user-select: none;
+      list-style: none;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    details.advanced summary::before {
+      content: "\25B8";
+      transition: transform 0.15s;
+      display: inline-block;
+    }
+
+    details.advanced[open] summary::before {
+      transform: rotate(90deg);
+    }
+
+    details.advanced .settings-grid {
+      margin-top: 14px;
+    }
+
+    .pipeline-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .pipeline-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .tabs {
+      display: inline-flex;
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 3px;
+      gap: 2px;
+    }
+
+    .tab-btn {
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      font-size: 12px;
+      font-weight: 500;
+      padding: 5px 10px;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: background 0.15s, color 0.15s;
+    }
+
+    .tab-btn.active {
+      background: var(--surface-3);
+      color: var(--text);
+    }
+
+    .progress-wrap {
+      display: none;
+      padding: 12px 16px;
+      background: var(--surface-2);
+      border-bottom: 1px solid var(--border);
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .progress-wrap.visible {
+      display: flex;
+    }
+
+    .progress-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 12.5px;
+      gap: 10px;
+    }
+
+    .progress-bar-bg {
+      height: 7px;
+      background: var(--surface-3);
+      border-radius: 999px;
+      overflow: hidden;
+    }
+
+    .progress-bar-fill {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, var(--accent), #a855f7);
+      border-radius: 999px;
+      transition: width 0.25s ease;
+    }
+
+    .dropzone {
+      margin: 16px;
+      border: 2px dashed var(--border);
+      border-radius: var(--radius);
+      padding: 28px 20px;
+      text-align: center;
+      cursor: pointer;
+      transition: border-color 0.15s, background 0.15s;
+      background: rgba(255, 255, 255, 0.01);
+    }
+
+    .dropzone.compact {
+      padding: 13px 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .dropzone:hover, .dropzone.dragover {
+      border-color: var(--accent);
+      background: var(--accent-soft);
+    }
+
+    .dropzone h3 {
+      font-size: 14px;
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
+
+    .dropzone.compact h3 {
+      margin-bottom: 0;
+      font-size: 13px;
+    }
+
+    .dropzone p {
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    .pipeline-list {
+      padding: 0 16px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 36px 20px;
+      color: var(--text-muted);
+      font-size: 13px;
+    }
+
+    .pipe-item {
+      display: grid;
+      grid-template-columns: 270px 1fr;
+      gap: 14px;
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 12px;
+      align-items: start;
+      transition: border-color 0.15s;
+    }
+
+    .pipe-item.status-processing {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 1px var(--accent-soft);
+    }
+
+    .pipe-item.status-error {
+      border-color: rgba(244, 63, 94, 0.45);
+    }
+
+    @media (max-width: 780px) {
+      .pipe-item {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .pipe-input-col {
+      display: flex;
+      gap: 11px;
+      min-width: 0;
+    }
+
+    .input-thumb-wrap {
+      position: relative;
+      width: 82px;
+      height: 82px;
+      border-radius: var(--radius-sm);
+      overflow: hidden;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+
+    .input-thumb-wrap img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+
+    .index-badge {
+      position: absolute;
+      top: 4px;
+      left: 4px;
+      background: rgba(11, 13, 18, 0.78);
+      color: #fff;
+      font-size: 10px;
+      font-weight: 700;
+      padding: 1px 5px;
+      border-radius: 4px;
+    }
+
+    .input-meta {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+      min-width: 0;
+      flex: 1;
+    }
+
+    .input-name {
+      font-size: 13px;
+      font-weight: 600;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .input-dims {
+      font-size: 11.5px;
+      color: var(--text-muted);
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 11px;
+      font-weight: 600;
+      padding: 2px 8px;
+      border-radius: 999px;
+      width: fit-content;
+    }
+
+    .badge-pending { background: var(--surface-3); color: var(--text-muted); }
+    .badge-processing { background: var(--accent-soft); color: #a5b4fc; }
+    .badge-done { background: var(--green-soft); color: #6ee7b7; }
+    .badge-error { background: var(--red-soft); color: #fda4af; }
+
+    .spinner {
+      width: 10px;
+      height: 10px;
+      border: 2px solid rgba(165, 180, 252, 0.35);
+      border-top-color: #a5b4fc;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      display: inline-block;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .item-btns {
+      display: flex;
+      gap: 5px;
+      margin-top: 2px;
+      flex-wrap: wrap;
+    }
+
+    .pipe-outputs-col {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      min-width: 0;
+    }
+
+    .error-box {
+      background: var(--red-soft);
+      border: 1px solid rgba(244, 63, 94, 0.35);
+      color: #fecdd3;
+      font-size: 12px;
+      padding: 8px 10px;
+      border-radius: var(--radius-sm);
+      word-break: break-word;
+    }
+
+    .outputs-row {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      align-items: flex-start;
+    }
+
+    .no-outputs {
+      font-size: 12px;
+      color: var(--text-dim);
+      padding: 24px 12px;
+      border: 1px dashed var(--border);
+      border-radius: var(--radius-sm);
+      width: 100%;
+      text-align: center;
+    }
+
+    .out-card {
+      position: relative;
+      width: 152px;
+      border-radius: var(--radius-sm);
+      overflow: hidden;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      transition: border-color 0.15s, transform 0.15s;
+    }
+
+    .out-card:hover {
+      border-color: var(--accent);
+      transform: translateY(-1px);
+    }
+
+    .out-thumb {
+      width: 100%;
+      aspect-ratio: 1 / 1;
+      object-fit: cover;
+      display: block;
+      cursor: zoom-in;
+      background: #090b10;
+    }
+
+    .out-footer {
+      padding: 6px 8px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 6px;
+      font-size: 11px;
+      color: var(--text-muted);
+      background: var(--surface);
+    }
+
+    .out-caption {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      flex: 1;
+      min-width: 0;
+    }
+
+    .out-actions {
+      display: flex;
+      gap: 4px;
+      flex-shrink: 0;
+    }
+
+    .mini-icon-btn {
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      color: var(--text);
+      border-radius: 5px;
+      padding: 3px 6px;
+      font-size: 11px;
+      cursor: pointer;
+    }
+
+    .mini-icon-btn:hover {
+      background: var(--surface-3);
+      border-color: var(--border-hover);
+    }
+
+    .mini-icon-btn.del:hover {
+      background: var(--red-soft);
+      border-color: var(--red);
+      color: #fda4af;
+    }
+
+    .gallery-grid {
+      padding: 0 16px 16px;
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+      gap: 14px;
+    }
+
+    .gallery-grid .out-card {
+      width: 100%;
+    }
+
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      z-index: 100;
+      background: rgba(5, 6, 10, 0.88);
+      backdrop-filter: blur(8px);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .modal-backdrop.open {
+      display: flex;
+    }
+
+    .modal {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      max-width: 1180px;
+      width: 100%;
+      max-height: 92vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      box-shadow: var(--shadow);
+    }
+
+    .modal-header {
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .modal-title {
+      font-size: 13.5px;
+      font-weight: 600;
+    }
+
+    .modal-body {
+      flex: 1;
+      overflow: auto;
+      padding: 16px;
+      background: #080a0f;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 14px;
+      min-height: 300px;
+    }
+
+    .modal-body.side-by-side {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      align-items: center;
+    }
+
+    @media (max-width: 720px) {
+      .modal-body.side-by-side {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .modal-img-box {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      max-width: 100%;
+    }
+
+    .modal-img-box img {
+      max-width: 100%;
+      max-height: 66vh;
+      border-radius: var(--radius-sm);
+      object-fit: contain;
+      border: 1px solid var(--border);
+    }
+
+    .modal-img-label {
+      font-size: 11.5px;
+      color: var(--text-muted);
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .modal-footer {
+      padding: 12px 16px;
+      border-top: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    .modal-meta-prompt {
+      max-width: 720px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .toast-container {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      z-index: 200;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      pointer-events: none;
+    }
+
+    .toast {
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 10px 14px;
+      border-radius: var(--radius-sm);
+      font-size: 13px;
+      box-shadow: var(--shadow);
+      pointer-events: auto;
+      animation: slideIn 0.2s ease;
+      max-width: 360px;
+    }
+
+    .toast.success { border-left: 3px solid var(--green); }
+    .toast.error { border-left: 3px solid var(--red); }
+    .toast.info { border-left: 3px solid var(--accent); }
+
+    @keyframes slideIn {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+  </style>
+</head>
+<body>
+
+  <header class="topbar">
+    <div class="brand">
+      <div class="brand-icon">R</div>
+      <div>
+        <h1>Runware I2I Pipeline</h1>
+        <small>Batch image-to-image editor &bull; LocalStorage + IndexedDB</small>
+      </div>
+    </div>
+    <div class="topbar-right">
+      <span class="stat-pill">Queue: <strong id="statQueue">0 / 100</strong></span>
+      <span class="stat-pill">Outputs: <strong id="statOutputs">0</strong></span>
+      <span class="stat-pill" id="statCostPill" style="display:none;">Cost: <strong id="statCost">$0.0000</strong></span>
+      <button class="btn" id="btnToggleSettings" title="Show or hide generation settings">Hide Settings</button>
+      <button class="btn btn-success" id="btnDownloadZip" disabled>Download All (ZIP)</button>
+    </div>
+  </header>
+
+  <main class="container">
+
+    <section class="settings-summary" id="settingsSummary">
+      <div class="summary-items">
+        <span class="summary-chip" id="sumModel">runware:400@6</span>
+        <span class="summary-chip" id="sumSize">1:1 &bull; 2048px</span>
+        <span class="summary-chip" id="sumCount">1 / img</span>
+        <span class="summary-chip" id="sumFormat">JPG 95%</span>
+        <span class="summary-prompt" id="sumPrompt">No prompt set</span>
+      </div>
+      <button class="btn btn-sm" id="btnShowSettingsFromBar">Show Settings</button>
+    </section>
+
+    <section class="card settings-panel" id="settingsPanel">
+      <div class="settings-header">
+        <h2>Generation Settings</h2>
+        <div style="display:flex; gap:8px; align-items:center;">
+          <span style="font-size:11.5px; color:var(--text-dim);">Auto-saved to localStorage</span>
+          <button class="btn btn-sm" id="btnHideSettingsInside">Hide Settings</button>
+        </div>
+      </div>
+
+      <div class="settings-grid">
+        <div class="field col-6">
+          <label for="apiKey">
+            Runware API Key
+            <span class="hint">Stored in localStorage only</span>
+          </label>
+          <div class="input-row">
+            <input type="password" id="apiKey" class="input" placeholder="Paste your Runware API key..." autocomplete="off" />
+            <button class="btn btn-sm" type="button" id="btnToggleKey">Show</button>
+          </div>
+        </div>
+
+        <div class="field col-6">
+          <label for="modelInput">
+            Model (AIR ID)
+            <span class="hint">Choose preset or type any AIR model ID</span>
+          </label>
+          <div class="input-row">
+            <select id="modelPreset" class="input" style="max-width: 210px;">
+              <option value="runware:400@6">runware:400@6 (Default)</option>
+              <option value="runware:400@3">runware:400@3 (Flux.2 Klein)</option>
+              <option value="runware:108@22">runware:108@22 (Qwen Edit+)</option>
+              <option value="alibaba:qwen-image@3.0">alibaba:qwen-image@3.0</option>
+              <option value="__custom">Custom AIR ID...</option>
+            </select>
+            <input type="text" id="modelInput" class="input" placeholder="e.g. runware:400@6" />
+          </div>
+        </div>
+
+        <div class="field col-12">
+          <label for="positivePrompt">
+            Prompt
+            <span class="hint">Applied to every image in the pipeline</span>
+          </label>
+          <textarea id="positivePrompt" class="input" placeholder="Describe how to edit each image (e.g., Make this a remarkable photo by converting it to 4-6 colors only, round pixels 80's style)..."></textarea>
+        </div>
+
+        <div class="field col-3">
+          <label for="aspectRatio">
+            Aspect Ratio
+            <span class="hint" id="dimPreview">2048 x 2048</span>
+          </label>
+          <select id="aspectRatio" class="input">
+            <option value="match">Match Input Image</option>
+            <option value="1:1">1:1 (Square)</option>
+            <option value="4:3">4:3 (Landscape)</option>
+            <option value="3:4">3:4 (Portrait)</option>
+            <option value="16:9">16:9 (Widescreen)</option>
+            <option value="9:16">9:16 (Vertical)</option>
+            <option value="3:2">3:2 (Photo Landscape)</option>
+            <option value="2:3">2:3 (Photo Portrait)</option>
+            <option value="custom">Custom W x H</option>
+          </select>
+        </div>
+
+        <div class="field col-3" id="baseSizeWrap">
+          <label for="baseSize">
+            Target Long Side
+            <span class="hint">Snapped to multiples of 64</span>
+          </label>
+          <select id="baseSize" class="input">
+            <option value="768">768 px (Fast)</option>
+            <option value="1024">1024 px (Standard)</option>
+            <option value="1536">1536 px (High)</option>
+            <option value="2048">2048 px (Ultra)</option>
+          </select>
+        </div>
+
+        <div class="field col-3" id="customDimsWrap" style="display:none;">
+          <label>Custom Width x Height <span class="hint">128-2048</span></label>
+          <div class="input-row">
+            <input type="number" id="customWidth" class="input" min="128" max="2048" step="64" value="1024" />
+            <span style="color:var(--text-dim);">x</span>
+            <input type="number" id="customHeight" class="input" min="128" max="2048" step="64" value="1024" />
+          </div>
+        </div>
+
+        <div class="field col-2">
+          <label for="numberResults">
+            Outputs / Input
+            <span class="hint">1-10</span>
+          </label>
+          <input type="number" id="numberResults" class="input" min="1" max="10" value="1" />
+        </div>
+
+        <div class="field col-2">
+          <label for="outputFormat">Format</label>
+          <select id="outputFormat" class="input">
+            <option value="JPG">JPG</option>
+            <option value="PNG">PNG</option>
+            <option value="WEBP">WEBP</option>
+          </select>
+        </div>
+
+        <div class="field col-2">
+          <label for="outputQuality">
+            Quality
+            <span class="hint" id="qualityVal">95</span>
+          </label>
+          <input type="range" id="outputQuality" min="50" max="100" value="95" style="margin-top:8px; accent-color:var(--accent);" />
+        </div>
+
+        <div class="col-12">
+          <details class="advanced" id="advancedDetails">
+            <summary>Advanced Model &amp; API Parameters (Steps, CFG, Acceleration, Input Mode, Negative Prompt)</summary>
+            <div class="settings-grid">
+              <div class="field col-12">
+                <label for="negativePrompt">
+                  Negative Prompt
+                  <span class="hint">Optional - omitted if blank</span>
+                </label>
+                <input type="text" id="negativePrompt" class="input" placeholder="Elements to avoid (leave blank to omit)..." />
+              </div>
+
+              <div class="field col-2">
+                <label for="steps">Steps <span class="hint">blank = omit</span></label>
+                <input type="number" id="steps" class="input" min="1" max="100" placeholder="4" />
+              </div>
+
+              <div class="field col-2">
+                <label for="cfgScale">CFGScale <span class="hint">blank = omit</span></label>
+                <input type="number" id="cfgScale" class="input" min="0" max="30" step="0.5" placeholder="3.5" />
+              </div>
+
+              <div class="field col-2">
+                <label for="acceleration">Acceleration</label>
+                <select id="acceleration" class="input">
+                  <option value="high">high</option>
+                  <option value="medium">medium</option>
+                  <option value="low">low</option>
+                  <option value="none">none</option>
+                  <option value="omit">Omit parameter</option>
+                </select>
+              </div>
+
+              <div class="field col-3">
+                <label for="inputMode">Image Input Field</label>
+                <select id="inputMode" class="input">
+                  <option value="referenceImages">inputs.referenceImages (Flux.2 / 400@6 / Qwen)</option>
+                  <option value="seedImage">seedImage + strength (Classic I2I)</option>
+                </select>
+              </div>
+
+              <div class="field col-3" id="strengthWrap" style="display:none;">
+                <label for="strength">Strength <span class="hint">0.05 - 1.0</span></label>
+                <input type="number" id="strength" class="input" min="0.05" max="1" step="0.05" value="0.75" />
+              </div>
+
+              <div class="field col-3">
+                <label for="outputType">
+                  API Output Delivery
+                  <span class="hint">dataURI avoids CORS</span>
+                </label>
+                <select id="outputType" class="input">
+                  <option value="dataURI">dataURI (Recommended for IndexedDB)</option>
+                  <option value="URL">URL (Fetch &amp; cache to IndexedDB)</option>
+                </select>
+              </div>
+            </div>
+          </details>
+        </div>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="pipeline-bar">
+        <div class="pipeline-actions">
+          <button class="btn btn-primary" id="btnRun">Run Pipeline</button>
+          <button class="btn btn-danger" id="btnStop" style="display:none;">Stop</button>
+          <button class="btn" id="btnRetryFailed" style="display:none;">Retry Failed</button>
+          <button class="btn" id="btnResetPending" title="Mark all queued images as Pending so you can run them again with a new prompt">Reset All to Pending</button>
+          <button class="btn btn-danger" id="btnClearOutputs" title="Delete all generated output images from IndexedDB">Clear Outputs</button>
+          <button class="btn btn-danger" id="btnClearAll" title="Delete entire queue and all outputs from IndexedDB">Clear All</button>
+        </div>
+
+        <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+          <div class="tabs" id="filterTabs">
+            <button class="tab-btn active" data-filter="all">All</button>
+            <button class="tab-btn" data-filter="pending">Pending</button>
+            <button class="tab-btn" data-filter="done">Done</button>
+            <button class="tab-btn" data-filter="error">Failed</button>
+          </div>
+          <div class="tabs" id="viewTabs">
+            <button class="tab-btn active" data-view="pipeline">Pipeline</button>
+            <button class="tab-btn" data-view="gallery">Outputs Gallery</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="progress-wrap" id="progressWrap">
+        <div class="progress-top">
+          <span id="progressText">Processing...</span>
+          <strong id="progressPct">0%</strong>
+        </div>
+        <div class="progress-bar-bg">
+          <div class="progress-bar-fill" id="progressFill"></div>
+        </div>
+      </div>
+
+      <div class="dropzone" id="dropzone">
+        <input type="file" id="fileInput" accept="image/*" multiple hidden />
+        <h3>Drop up to 100 images here or click to browse</h3>
+        <p>JPG, PNG, WebP supported &bull; Saved automatically to IndexedDB</p>
+      </div>
+
+      <div class="pipeline-list" id="pipelineList"></div>
+      <div class="gallery-grid" id="galleryGrid" style="display:none;"></div>
+    </section>
+
+  </main>
+
+  <div class="modal-backdrop" id="modalBackdrop">
+    <div class="modal">
+      <div class="modal-header">
+        <div class="modal-title" id="modalTitle">Result Preview</div>
+        <div style="display:flex; gap:6px; align-items:center; flex-wrap:wrap;">
+          <button class="btn btn-sm" id="btnModalPrev">Prev</button>
+          <button class="btn btn-sm" id="btnModalNext">Next</button>
+          <button class="btn btn-sm" id="btnModalCompare">Side-by-Side: Off</button>
+          <button class="btn btn-sm btn-success" id="btnModalDownload">Download</button>
+          <button class="btn btn-sm btn-danger" id="btnModalDelete">Delete</button>
+          <button class="btn btn-sm" id="btnModalClose">Close</button>
+        </div>
+      </div>
+      <div class="modal-body" id="modalBody">
+        <div class="modal-img-box" id="modalOrigBox" style="display:none;">
+          <span class="modal-img-label">Original Input</span>
+          <img id="modalOrigImg" alt="Original" />
+        </div>
+        <div class="modal-img-box">
+          <span class="modal-img-label" id="modalOutLabel">Generated Output</span>
+          <img id="modalOutImg" alt="Generated" />
+        </div>
+      </div>
+      <div class="modal-footer">
+        <div class="modal-meta-prompt" id="modalPrompt"></div>
+        <div id="modalMeta"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast-container" id="toastContainer"></div>
+
+  <script>
+    document.addEventListener("DOMContentLoaded", function () {
+      "use strict";
+
+      var MAX_IMAGES = 100;
+      var API_ENDPOINT = "https://api.runware.ai/v1";
+      var LS_API_KEY = "runware_i2i_api_key";
+      var LS_SETTINGS_KEY = "runware_i2i_settings_v1";
+      var DB_NAME = "RunwareI2IPipelineDB";
+      var DB_VERSION = 1;
+
+      var DEFAULT_SETTINGS = {
+        model: "runware:400@6",
+        positivePrompt: "",
+        negativePrompt: "",
+        aspectRatio: "1:1",
+        baseSize: 2048,
+        customWidth: 1024,
+        customHeight: 1024,
+        numberResults: 1,
+        outputFormat: "JPG",
+        outputQuality: 95,
+        steps: "4",
+        CFGScale: "3.5",
+        acceleration: "high",
+        inputMode: "referenceImages",
+        strength: "0.75",
+        outputType: "dataURI",
+        settingsHidden: false
+      };
+
+      var MODEL_PRESETS = {
+        "runware:400@6": { steps: "4", CFGScale: "3.5", acceleration: "high", inputMode: "referenceImages" },
+        "runware:400@3": { steps: "", CFGScale: "", acceleration: "omit", inputMode: "referenceImages" },
+        "runware:108@22": { steps: "", CFGScale: "", acceleration: "omit", inputMode: "referenceImages" },
+        "alibaba:qwen-image@3.0": { steps: "", CFGScale: "", acceleration: "omit", inputMode: "referenceImages" }
+      };
+
+      var db = null;
+      var settings = loadSettings();
+      var inputs = [];
+      var outputs = [];
+      var objectUrls = new Map();
+      var activeFilter = "all";
+      var activeView = "pipeline";
+      var isRunning = false;
+      var stopRequested = false;
+      var activeAbortController = null;
+      var modalOutputId = null;
+      var modalCompare = false;
+
+      var el = {
+        apiKey: document.getElementById("apiKey"),
+        btnToggleKey: document.getElementById("btnToggleKey"),
+        modelPreset: document.getElementById("modelPreset"),
+        modelInput: document.getElementById("modelInput"),
+        positivePrompt: document.getElementById("positivePrompt"),
+        negativePrompt: document.getElementById("negativePrompt"),
+        aspectRatio: document.getElementById("aspectRatio"),
+        baseSize: document.getElementById("baseSize"),
+        baseSizeWrap: document.getElementById("baseSizeWrap"),
+        customDimsWrap: document.getElementById("customDimsWrap"),
+        customWidth: document.getElementById("customWidth"),
+        customHeight: document.getElementById("customHeight"),
+        dimPreview: document.getElementById("dimPreview"),
+        numberResults: document.getElementById("numberResults"),
+        outputFormat: document.getElementById("outputFormat"),
+        outputQuality: document.getElementById("outputQuality"),
+        qualityVal: document.getElementById("qualityVal"),
+        steps: document.getElementById("steps"),
+        cfgScale: document.getElementById("cfgScale"),
+        acceleration: document.getElementById("acceleration"),
+        inputMode: document.getElementById("inputMode"),
+        strengthWrap: document.getElementById("strengthWrap"),
+        strength: document.getElementById("strength"),
+        outputType: document.getElementById("outputType"),
+        settingsPanel: document.getElementById("settingsPanel"),
+        settingsSummary: document.getElementById("settingsSummary"),
+        btnToggleSettings: document.getElementById("btnToggleSettings"),
+        btnHideSettingsInside: document.getElementById("btnHideSettingsInside"),
+        btnShowSettingsFromBar: document.getElementById("btnShowSettingsFromBar"),
+        sumModel: document.getElementById("sumModel"),
+        sumSize: document.getElementById("sumSize"),
+        sumCount: document.getElementById("sumCount"),
+        sumFormat: document.getElementById("sumFormat"),
+        sumPrompt: document.getElementById("sumPrompt"),
+        statQueue: document.getElementById("statQueue"),
+        statOutputs: document.getElementById("statOutputs"),
+        statCostPill: document.getElementById("statCostPill"),
+        statCost: document.getElementById("statCost"),
+        btnDownloadZip: document.getElementById("btnDownloadZip"),
+        btnRun: document.getElementById("btnRun"),
+        btnStop: document.getElementById("btnStop"),
+        btnRetryFailed: document.getElementById("btnRetryFailed"),
+        btnResetPending: document.getElementById("btnResetPending"),
+        btnClearOutputs: document.getElementById("btnClearOutputs"),
+        btnClearAll: document.getElementById("btnClearAll"),
+        filterTabs: document.getElementById("filterTabs"),
+        viewTabs: document.getElementById("viewTabs"),
+        progressWrap: document.getElementById("progressWrap"),
+        progressText: document.getElementById("progressText"),
+        progressPct: document.getElementById("progressPct"),
+        progressFill: document.getElementById("progressFill"),
+        dropzone: document.getElementById("dropzone"),
+        fileInput: document.getElementById("fileInput"),
+        pipelineList: document.getElementById("pipelineList"),
+        galleryGrid: document.getElementById("galleryGrid"),
+        modalBackdrop: document.getElementById("modalBackdrop"),
+        modalTitle: document.getElementById("modalTitle"),
+        modalBody: document.getElementById("modalBody"),
+        modalOrigBox: document.getElementById("modalOrigBox"),
+        modalOrigImg: document.getElementById("modalOrigImg"),
+        modalOutImg: document.getElementById("modalOutImg"),
+        modalOutLabel: document.getElementById("modalOutLabel"),
+        modalPrompt: document.getElementById("modalPrompt"),
+        modalMeta: document.getElementById("modalMeta"),
+        btnModalPrev: document.getElementById("btnModalPrev"),
+        btnModalNext: document.getElementById("btnModalNext"),
+        btnModalCompare: document.getElementById("btnModalCompare"),
+        btnModalDownload: document.getElementById("btnModalDownload"),
+        btnModalDelete: document.getElementById("btnModalDelete"),
+        btnModalClose: document.getElementById("btnModalClose"),
+        toastContainer: document.getElementById("toastContainer")
+      };
+
+      /* Utilities */
+
+      function generateUUID() {
+        if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+          return crypto.randomUUID();
+        }
+        return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, function (c) {
+          var r = (Math.random() * 16) | 0;
+          var v = c === "x" ? r : (r & 0x3) | 0x8;
+          return v.toString(16);
+        });
+      }
+
+      function toast(message, type) {
+        var div = document.createElement("div");
+        div.className = "toast " + (type || "info");
+        div.textContent = message;
+        el.toastContainer.appendChild(div);
+        setTimeout(function () {
+          div.style.opacity = "0";
+          div.style.transition = "opacity 0.25s";
+          setTimeout(function () {
+            if (div.parentNode) div.parentNode.removeChild(div);
+          }, 260);
+        }, 3400);
+      }
+
+      function round64(n) {
+        return Math.max(128, Math.min(2048, Math.round(n / 64) * 64));
+      }
+
+      function computeDimensions(aspectRatio, baseSize, imgW, imgH, customW, customH) {
+        if (aspectRatio === "custom") {
+          return {
+            width: round64(Number(customW) || 1024),
+            height: round64(Number(customH) || 1024)
+          };
+        }
+        var target = Math.max(256, Math.min(2048, Number(baseSize) || 1024));
+        var ratio = 1;
+        if (aspectRatio === "match") {
+          ratio = imgW && imgH ? imgW / imgH : 1;
+        } else if (aspectRatio && aspectRatio.indexOf(":") !== -1) {
+          var parts = aspectRatio.split(":");
+          var rw = Number(parts[0]);
+          var rh = Number(parts[1]);
+          if (rw > 0 && rh > 0) ratio = rw / rh;
+        }
+        var width;
+        var height;
+        if (ratio >= 1) {
+          width = round64(target);
+          height = round64(target / ratio);
+        } else {
+          height = round64(target);
+          width = round64(target * ratio);
+        }
+        return { width: width, height: height };
+      }
+
+      function getObjectUrl(id, blob, fallbackUrl) {
+        if (!blob) return fallbackUrl || "";
+        if (objectUrls.has(id)) return objectUrls.get(id);
+        var url = URL.createObjectURL(blob);
+        objectUrls.set(id, url);
+        return url;
+      }
+
+      function revokeObjectUrl(id) {
+        if (objectUrls.has(id)) {
+          URL.revokeObjectURL(objectUrls.get(id));
+          objectUrls.delete(id);
+        }
+      }
+
+      function getImageDimensions(blob) {
+        return new Promise(function (resolve) {
+          var url = URL.createObjectURL(blob);
+          var img = new Image();
+          img.onload = function () {
+            URL.revokeObjectURL(url);
+            resolve({ width: img.naturalWidth, height: img.naturalHeight });
+          };
+          img.onerror = function () {
+            URL.revokeObjectURL(url);
+            resolve({ width: 0, height: 0 });
+          };
+          img.src = url;
+        });
+      }
+
+      function blobToDataURI(blob) {
+        return new Promise(function (resolve, reject) {
+          var reader = new FileReader();
+          reader.onload = function () { resolve(reader.result); };
+          reader.onerror = function () { reject(new Error("Failed to read image data")); };
+          reader.readAsDataURL(blob);
+        });
+      }
+
+      async function prepareInputDataURI(item) {
+        var supported = ["image/jpeg", "image/png", "image/webp"];
+        var maxSide = Math.max(item.width || 0, item.height || 0);
+        if (supported.indexOf(item.type) !== -1 && maxSide <= 3072 && item.blob.size <= 12 * 1024 * 1024) {
+          return blobToDataURI(item.blob);
+        }
+        return new Promise(function (resolve, reject) {
+          var url = URL.createObjectURL(item.blob);
+          var img = new Image();
+          img.onload = function () {
+            URL.revokeObjectURL(url);
+            var scale = Math.min(1, 2048 / Math.max(img.naturalWidth, img.naturalHeight));
+            var w = Math.max(1, Math.round(img.naturalWidth * scale));
+            var h = Math.max(1, Math.round(img.naturalHeight * scale));
+            var canvas = document.createElement("canvas");
+            canvas.width = w;
+            canvas.height = h;
+            var ctx = canvas.getContext("2d");
+            ctx.drawImage(img, 0, 0, w, h);
+            resolve(canvas.toDataURL("image/jpeg", 0.94));
+          };
+          img.onerror = function () {
+            URL.revokeObjectURL(url);
+            blobToDataURI(item.blob).then(resolve).catch(reject);
+          };
+          img.src = url;
+        });
+      }
+
+      function dataURIToBlob(dataURI) {
+        var parts = dataURI.split(",");
+        var meta = parts[0] || "";
+        var mimeMatch = meta.match(/:(.*?);/);
+        var mime = mimeMatch ? mimeMatch[1] : "image/jpeg";
+        var binary = atob(parts[1]);
+        var bytes = new Uint8Array(binary.length);
+        for (var i = 0; i < binary.length; i++) {
+          bytes[i] = binary.charCodeAt(i);
+        }
+        return new Blob([bytes], { type: mime });
+      }
+
+      function base64ToBlob(base64, format) {
+        var mimeMap = { JPG: "image/jpeg", JPEG: "image/jpeg", PNG: "image/png", WEBP: "image/webp" };
+        var key = String(format || "JPG").toUpperCase();
+        var mime = mimeMap[key] || "image/jpeg";
+        var binary = atob(base64);
+        var bytes = new Uint8Array(binary.length);
+        for (var i = 0; i < binary.length; i++) {
+          bytes[i] = binary.charCodeAt(i);
+        }
+        return new Blob([bytes], { type: mime });
+      }
+
+      function sanitizeBaseName(filename) {
+        var clean = (filename || "image")
+          .replace(/\.[^/.]+$/, "")
+          .replace(/[^a-zA-Z0-9._-]+/g, "_")
+          .slice(0, 60);
+        return clean || "image";
+      }
+
+      function formatExtension(format, mime) {
+        if (format) {
+          var f = String(format).toLowerCase();
+          return f === "jpeg" ? "jpg" : f;
+        }
+        if (mime && mime.indexOf("png") !== -1) return "png";
+        if (mime && mime.indexOf("webp") !== -1) return "webp";
+        return "jpg";
+      }
+
+      function downloadBlob(blob, filename) {
+        var url = URL.createObjectURL(blob);
+        var a = document.createElement("a");
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+      }
+
+      /* Zero-Dependency ZIP Builder (STORE method) */
+
+      function buildCrcTable() {
+        var table = new Uint32Array(256);
+        for (var n = 0; n < 256; n++) {
+          var c = n;
+          for (var k = 0; k < 8; k++) {
+            c = (c & 1) ? (0xedb88320 ^ (c >>> 1)) : (c >>> 1);
+          }
+          table[n] = c >>> 0;
+        }
+        return table;
+      }
+
+      var crcTable = buildCrcTable();
+
+      function crc32(bytes) {
+        var c = 0xffffffff;
+        for (var i = 0; i < bytes.length; i++) {
+          c = crcTable[(c ^ bytes[i]) & 0xff] ^ (c >>> 8);
+        }
+        return (c ^ 0xffffffff) >>> 0;
+      }
+
+      async function createZipBlob(files) {
+        var encoder = new TextEncoder();
+        var localParts = [];
+        var centralParts = [];
+        var offset = 0;
+
+        for (var i = 0; i < files.length; i++) {
+          var file = files[i];
+          var nameBytes = encoder.encode(file.name);
+          var buffer = await file.blob.arrayBuffer();
+          var dataBytes = new Uint8Array(buffer);
+          var crc = crc32(dataBytes);
+          var size = dataBytes.length;
+
+          var lfh = new ArrayBuffer(30);
+          var lv = new DataView(lfh);
+          lv.setUint32(0, 0x04034b50, true);
+          lv.setUint16(4, 20, true);
+          lv.setUint16(6, 0x0800, true);
+          lv.setUint16(8, 0, true);
+          lv.setUint16(10, 0, true);
+          lv.setUint16(12, 0, true);
+          lv.setUint32(14, crc, true);
+          lv.setUint32(18, size, true);
+          lv.setUint32(22, size, true);
+          lv.setUint16(26, nameBytes.length, true);
+          lv.setUint16(28, 0, true);
+
+          localParts.push(new Uint8Array(lfh), nameBytes, dataBytes);
+
+          var cdh = new ArrayBuffer(46);
+          var cv = new DataView(cdh);
+          cv.setUint32(0, 0x02014b50, true);
+          cv.setUint16(4, 20, true);
+          cv.setUint16(6, 20, true);
+          cv.setUint16(8, 0x0800, true);
+          cv.setUint16(10, 0, true);
+          cv.setUint16(12, 0, true);
+          cv.setUint16(14, 0, true);
+          cv.setUint32(16, crc, true);
+          cv.setUint32(20, size, true);
+          cv.setUint32(24, size, true);
+          cv.setUint16(28, nameBytes.length, true);
+          cv.setUint16(30, 0, true);
+          cv.setUint16(32, 0, true);
+          cv.setUint16(34, 0, true);
+          cv.setUint16(36, 0, true);
+          cv.setUint32(38, 0, true);
+          cv.setUint32(42, offset, true);
+
+          centralParts.push(new Uint8Array(cdh), nameBytes);
+          offset += 30 + nameBytes.length + size;
+        }
+
+        var centralSize = 0;
+        for (var j = 0; j < centralParts.length; j++) {
+          centralSize += centralParts[j].length;
+        }
+
+        var eocd = new ArrayBuffer(22);
+        var ev = new DataView(eocd);
+        ev.setUint32(0, 0x06054b50, true);
+        ev.setUint16(4, 0, true);
+        ev.setUint16(6, 0, true);
+        ev.setUint16(8, files.length, true);
+        ev.setUint16(10, files.length, true);
+        ev.setUint32(12, centralSize, true);
+        ev.setUint32(16, offset, true);
+        ev.setUint16(20, 0, true);
+
+        return new Blob(localParts.concat(centralParts, [new Uint8Array(eocd)]), {
+          type: "application/zip"
+        });
+      }
+
+      /* LocalStorage Persistence */
+
+      function loadSettings() {
+        try {
+          var raw = localStorage.getItem(LS_SETTINGS_KEY);
+          if (!raw) return Object.assign({}, DEFAULT_SETTINGS);
+          return Object.assign({}, DEFAULT_SETTINGS, JSON.parse(raw));
+        } catch (err) {
+          return Object.assign({}, DEFAULT_SETTINGS);
+        }
+      }
+
+      function saveSettings() {
+        try {
+          localStorage.setItem(LS_SETTINGS_KEY, JSON.stringify(settings));
+        } catch (err) {
+          console.error("Failed to persist settings:", err);
+        }
+        updateSettingsSummary();
+      }
+
+      function loadApiKey() {
+        try {
+          return localStorage.getItem(LS_API_KEY) || "";
+        } catch (err) {
+          return "";
+        }
+      }
+
+      function saveApiKey(key) {
+        try {
+          if (key) localStorage.setItem(LS_API_KEY, key);
+          else localStorage.removeItem(LS_API_KEY);
+        } catch (err) {
+          console.error("Failed to persist API key:", err);
+        }
+      }
+
+      /* IndexedDB Layer */
+
+      function openDB() {
+        return new Promise(function (resolve, reject) {
+          var req = indexedDB.open(DB_NAME, DB_VERSION);
+          req.onupgradeneeded = function (e) {
+            var database = e.target.result;
+            if (!database.objectStoreNames.contains("inputs")) {
+              database.createObjectStore("inputs", { keyPath: "id" });
+            }
+            if (!database.objectStoreNames.contains("outputs")) {
+              var outStore = database.createObjectStore("outputs", { keyPath: "id" });
+              outStore.createIndex("by_inputId", "inputId", { unique: false });
+            }
+          };
+          req.onsuccess = function () { resolve(req.result); };
+          req.onerror = function () { reject(req.error); };
+        });
+      }
+
+      function dbGetAll(storeName) {
+        return new Promise(function (resolve, reject) {
+          var tx = db.transaction(storeName, "readonly");
+          var req = tx.objectStore(storeName).getAll();
+          req.onsuccess = function () { resolve(req.result || []); };
+          req.onerror = function () { reject(req.error); };
+        });
+      }
+
+      function dbPut(storeName, value) {
+        return new Promise(function (resolve, reject) {
+          var tx = db.transaction(storeName, "readwrite");
+          tx.objectStore(storeName).put(value);
+          tx.oncomplete = function () { resolve(); };
+          tx.onerror = function () { reject(tx.error); };
+        });
+      }
+
+      function dbDelete(storeName, id) {
+        return new Promise(function (resolve, reject) {
+          var tx = db.transaction(storeName, "readwrite");
+          tx.objectStore(storeName).delete(id);
+          tx.oncomplete = function () { resolve(); };
+          tx.onerror = function () { reject(tx.error); };
+        });
+      }
+
+      function dbClear(storeName) {
+        return new Promise(function (resolve, reject) {
+          var tx = db.transaction(storeName, "readwrite");
+          tx.objectStore(storeName).clear();
+          tx.oncomplete = function () { resolve(); };
+          tx.onerror = function () { reject(tx.error); };
+        });
+      }
+
+      /* Settings UI */
+
+      function applySettingsToUI() {
+        el.apiKey.value = loadApiKey();
+        el.modelInput.value = settings.model;
+        el.modelPreset.value = Object.prototype.hasOwnProperty.call(MODEL_PRESETS, settings.model)
+          ? settings.model
+          : "__custom";
+        el.positivePrompt.value = settings.positivePrompt;
+        el.negativePrompt.value = settings.negativePrompt;
+        el.aspectRatio.value = settings.aspectRatio;
+        el.baseSize.value = String(settings.baseSize);
+        el.customWidth.value = String(settings.customWidth);
+        el.customHeight.value = String(settings.customHeight);
+        el.numberResults.value = String(settings.numberResults);
+        el.outputFormat.value = settings.outputFormat;
+        el.outputQuality.value = String(settings.outputQuality);
+        el.qualityVal.textContent = String(settings.outputQuality);
+        el.steps.value = settings.steps;
+        el.cfgScale.value = settings.CFGScale;
+        el.acceleration.value = settings.acceleration;
+        el.inputMode.value = settings.inputMode;
+        el.strength.value = settings.strength;
+        el.outputType.value = settings.outputType;
+
+        updateDimensionUI();
+        el.strengthWrap.style.display = settings.inputMode === "seedImage" ? "" : "none";
+        applySettingsVisibility();
+        updateSettingsSummary();
+      }
+
+      function updateDimensionUI() {
+        var isCustom = settings.aspectRatio === "custom";
+        el.baseSizeWrap.style.display = isCustom ? "none" : "";
+        el.customDimsWrap.style.display = isCustom ? "" : "none";
+
+        if (settings.aspectRatio === "match") {
+          el.dimPreview.textContent = "Auto (max " + settings.baseSize + "px)";
+        } else {
+          var d = computeDimensions(
+            settings.aspectRatio,
+            settings.baseSize,
+            1024,
+            1024,
+            settings.customWidth,
+            settings.customHeight
+          );
+          el.dimPreview.textContent = d.width + " x " + d.height;
+        }
+      }
+
+      function applySettingsVisibility() {
+        var hidden = Boolean(settings.settingsHidden);
+        el.settingsPanel.classList.toggle("hidden", hidden);
+        el.settingsSummary.classList.toggle("visible", hidden);
+        el.btnToggleSettings.textContent = hidden ? "Show Settings" : "Hide Settings";
+      }
+
+      function updateSettingsSummary() {
+        el.sumModel.textContent = settings.model || "No model";
+        if (settings.aspectRatio === "match") {
+          el.sumSize.textContent = "Match Input | " + settings.baseSize + "px";
+        } else if (settings.aspectRatio === "custom") {
+          el.sumSize.textContent = round64(settings.customWidth) + "x" + round64(settings.customHeight);
+        } else {
+          var d = computeDimensions(settings.aspectRatio, settings.baseSize);
+          el.sumSize.textContent = settings.aspectRatio + " | " + d.width + "x" + d.height;
+        }
+        el.sumCount.textContent = settings.numberResults + " / img";
+        el.sumFormat.textContent = settings.outputFormat + " " + settings.outputQuality + "%";
+        el.sumPrompt.textContent = settings.positivePrompt.trim()
+          ? '"' + settings.positivePrompt.trim() + '"'
+          : "No prompt set";
+      }
+
+      function bindSettingsEvents() {
+        el.apiKey.addEventListener("input", function () {
+          saveApiKey(el.apiKey.value.trim());
+        });
+
+        el.btnToggleKey.addEventListener("click", function () {
+          var isPwd = el.apiKey.type === "password";
+          el.apiKey.type = isPwd ? "text" : "password";
+          el.btnToggleKey.textContent = isPwd ? "Hide" : "Show";
+        });
+
+        el.modelPreset.addEventListener("change", function () {
+          var val = el.modelPreset.value;
+          if (val !== "__custom") {
+            settings.model = val;
+            el.modelInput.value = val;
+            var preset = MODEL_PRESETS[val];
+            if (preset) {
+              settings.steps = preset.steps;
+              settings.CFGScale = preset.CFGScale;
+              settings.acceleration = preset.acceleration;
+              settings.inputMode = preset.inputMode;
+              el.steps.value = preset.steps;
+              el.cfgScale.value = preset.CFGScale;
+              el.acceleration.value = preset.acceleration;
+              el.inputMode.value = preset.inputMode;
+              el.strengthWrap.style.display = settings.inputMode === "seedImage" ? "" : "none";
+            }
+            saveSettings();
+          } else {
+            el.modelInput.focus();
+          }
+        });
+
+        el.modelInput.addEventListener("input", function () {
+          settings.model = el.modelInput.value.trim();
+          el.modelPreset.value = Object.prototype.hasOwnProperty.call(MODEL_PRESETS, settings.model)
+            ? settings.model
+            : "__custom";
+          saveSettings();
+        });
+
+        el.positivePrompt.addEventListener("input", function () {
+          settings.positivePrompt = el.positivePrompt.value;
+          saveSettings();
+        });
+
+        el.negativePrompt.addEventListener("input", function () {
+          settings.negativePrompt = el.negativePrompt.value;
+          saveSettings();
+        });
+
+        el.aspectRatio.addEventListener("change", function () {
+          settings.aspectRatio = el.aspectRatio.value;
+          updateDimensionUI();
+          saveSettings();
+        });
+
+        el.baseSize.addEventListener("change", function () {
+          settings.baseSize = Number(el.baseSize.value);
+          updateDimensionUI();
+          saveSettings();
+        });
+
+        el.customWidth.addEventListener("change", function () {
+          settings.customWidth = round64(Number(el.customWidth.value));
+          el.customWidth.value = String(settings.customWidth);
+          updateDimensionUI();
+          saveSettings();
+        });
+
+        el.customHeight.addEventListener("change", function () {
+          settings.customHeight = round64(Number(el.customHeight.value));
+          el.customHeight.value = String(settings.customHeight);
+          updateDimensionUI();
+          saveSettings();
+        });
+
+        el.numberResults.addEventListener("change", function () {
+          var v = Math.max(1, Math.min(10, parseInt(el.numberResults.value, 10) || 1));
+          settings.numberResults = v;
+          el.numberResults.value = String(v);
+          saveSettings();
+        });
+
+        el.outputFormat.addEventListener("change", function () {
+          settings.outputFormat = el.outputFormat.value;
+          saveSettings();
+        });
+
+        el.outputQuality.addEventListener("input", function () {
+          settings.outputQuality = Number(el.outputQuality.value);
+          el.qualityVal.textContent = String(settings.outputQuality);
+          saveSettings();
+        });
+
+        el.steps.addEventListener("input", function () {
+          settings.steps = el.steps.value.trim();
+          saveSettings();
+        });
+
+        el.cfgScale.addEventListener("input", function () {
+          settings.CFGScale = el.cfgScale.value.trim();
+          saveSettings();
+        });
+
+        el.acceleration.addEventListener("change", function () {
+          settings.acceleration = el.acceleration.value;
+          saveSettings();
+        });
+
+        el.inputMode.addEventListener("change", function () {
+          settings.inputMode = el.inputMode.value;
+          el.strengthWrap.style.display = settings.inputMode === "seedImage" ? "" : "none";
+          saveSettings();
+        });
+
+        el.strength.addEventListener("input", function () {
+          settings.strength = el.strength.value.trim();
+          saveSettings();
+        });
+
+        el.outputType.addEventListener("change", function () {
+          settings.outputType = el.outputType.value;
+          saveSettings();
+        });
+
+        function toggleHidden() {
+          settings.settingsHidden = !settings.settingsHidden;
+          applySettingsVisibility();
+          saveSettings();
+        }
+
+        el.btnToggleSettings.addEventListener("click", toggleHidden);
+        el.btnHideSettingsInside.addEventListener("click", toggleHidden);
+        el.btnShowSettingsFromBar.addEventListener("click", toggleHidden);
+      }
+
+      /* Runware API */
+
+      async function runRunwareInference(inputItem, signal) {
+        var apiKey = loadApiKey().trim();
+        if (!apiKey) {
+          throw new Error("Missing Runware API key. Enter your key in Settings.");
+        }
+        if (!settings.model.trim()) {
+          throw new Error("Missing model AIR ID.");
+        }
+        if (!settings.positivePrompt.trim()) {
+          throw new Error("Please enter a prompt before running.");
+        }
+
+        var dataUri = await prepareInputDataURI(inputItem);
+        var dims = computeDimensions(
+          settings.aspectRatio,
+          settings.baseSize,
+          inputItem.width,
+          inputItem.height,
+          settings.customWidth,
+          settings.customHeight
+        );
+
+        var task = {
+          taskType: "imageInference",
+          taskUUID: generateUUID(),
+          model: settings.model.trim(),
+          positivePrompt: settings.positivePrompt.trim(),
+          width: dims.width,
+          height: dims.height,
+          numberResults: Math.max(1, Math.min(10, Number(settings.numberResults) || 1)),
+          outputType: settings.outputType || "dataURI",
+          outputFormat: settings.outputFormat || "JPG",
+          outputQuality: Number(settings.outputQuality) || 95,
+          deliveryMethod: "sync",
+          includeCost: true
+        };
+
+        if (settings.negativePrompt.trim()) {
+          task.negativePrompt = settings.negativePrompt.trim();
+        }
+        if (settings.steps !== "" && !Number.isNaN(Number(settings.steps))) {
+          task.steps = Number(settings.steps);
+        }
+        if (settings.CFGScale !== "" && !Number.isNaN(Number(settings.CFGScale))) {
+          task.CFGScale = Number(settings.CFGScale);
+        }
+        if (settings.acceleration && settings.acceleration !== "omit") {
+          task.acceleration = settings.acceleration;
+        }
+
+        if (settings.inputMode === "seedImage") {
+          task.seedImage = dataUri;
+          if (settings.strength !== "" && !Number.isNaN(Number(settings.strength))) {
+            task.strength = Number(settings.strength);
+          }
+        } else {
+          task.inputs = {
+            referenceImages: [dataUri]
+          };
+        }
+
+        var response = await fetch(API_ENDPOINT, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": "Bearer " + apiKey
+          },
+          body: JSON.stringify([task]),
+          signal: signal
+        });
+
+        var payload;
+        try {
+          payload = await response.json();
+        } catch (err) {
+          throw new Error("HTTP " + response.status + ": Invalid JSON response from Runware API");
+        }
+
+        if (payload && Array.isArray(payload.errors) && payload.errors.length > 0) {
+          var errMsg = payload.errors.map(function (e) {
+            return e.message || e.code || JSON.stringify(e);
+          }).join("; ");
+          throw new Error(errMsg);
+        }
+
+        if (!response.ok) {
+          throw new Error((payload && (payload.message || payload.error)) || ("HTTP " + response.status + " error"));
+        }
+
+        var results = Array.isArray(payload.data)
+          ? payload.data.filter(function (d) {
+              return d.taskType === "imageInference" || d.imageDataURI || d.imageURL || d.imageBase64Data;
+            })
+          : [];
+
+        if (results.length === 0) {
+          throw new Error("Runware returned no generated images.");
+        }
+
+        var savedOutputs = [];
+        for (var i = 0; i < results.length; i++) {
+          var res = results[i];
+          var blob = null;
+          if (res.imageDataURI) {
+            blob = dataURIToBlob(res.imageDataURI);
+          } else if (res.imageBase64Data) {
+            blob = base64ToBlob(res.imageBase64Data, task.outputFormat);
+          } else if (res.imageURL) {
+            try {
+              var imgRes = await fetch(res.imageURL, { signal: signal });
+              if (imgRes.ok) blob = await imgRes.blob();
+            } catch (fetchErr) {
+              console.warn("Could not fetch imageURL into Blob, keeping URL fallback:", fetchErr);
+            }
+          }
+
+          var outRecord = {
+            id: generateUUID(),
+            inputId: inputItem.id,
+            inputName: inputItem.name,
+            blob: blob,
+            imageURL: res.imageURL || "",
+            format: task.outputFormat,
+            width: dims.width,
+            height: dims.height,
+            prompt: task.positivePrompt,
+            model: task.model,
+            seed: res.seed !== undefined ? res.seed : null,
+            cost: typeof res.cost === "number" ? res.cost : null,
+            createdAt: Date.now()
+          };
+
+          await dbPut("outputs", outRecord);
+          outputs.push(outRecord);
+          savedOutputs.push(outRecord);
+        }
+
+        return savedOutputs;
+      }
+
+      /* Pipeline Execution */
+
+      async function runPipeline(targetIds) {
+        if (isRunning) return;
+
+        if (!loadApiKey().trim()) {
+          toast("Please enter your Runware API key in Settings first.", "error");
+          if (settings.settingsHidden) {
+            settings.settingsHidden = false;
+            applySettingsVisibility();
+            saveSettings();
+          }
+          el.apiKey.focus();
+          return;
+        }
+        if (!settings.positivePrompt.trim()) {
+          toast("Please enter a prompt first.", "error");
+          if (settings.settingsHidden) {
+            settings.settingsHidden = false;
+            applySettingsVisibility();
+            saveSettings();
+          }
+          el.positivePrompt.focus();
+          return;
+        }
+
+        var queue = targetIds
+          ? inputs.filter(function (item) { return targetIds.indexOf(item.id) !== -1; })
+          : inputs.filter(function (item) { return item.status === "pending"; });
+
+        if (queue.length === 0) {
+          toast("No pending images to process. Add images or click Reset All to Pending.", "info");
+          return;
+        }
+
+        isRunning = true;
+        stopRequested = false;
+        updateControlsState();
+        el.progressWrap.classList.add("visible");
+
+        var processed = 0;
+        var succeeded = 0;
+        var failed = 0;
+
+        for (var i = 0; i < queue.length; i++) {
+          if (stopRequested) break;
+
+          var item = queue[i];
+          item.status = "processing";
+          item.error = "";
+          await dbPut("inputs", item);
+          renderAll();
+
+          var pct = Math.round((processed / queue.length) * 100);
+          el.progressText.textContent = "Processing " + (processed + 1) + " of " + queue.length + " - " + item.name;
+          el.progressPct.textContent = pct + "%";
+          el.progressFill.style.width = pct + "%";
+
+          activeAbortController = new AbortController();
+          try {
+            await runRunwareInference(item, activeAbortController.signal);
+            item.status = "done";
+            item.error = "";
+            succeeded++;
+          } catch (err) {
+            if ((err && err.name === "AbortError") || stopRequested) {
+              item.status = "pending";
+              item.error = "";
+              await dbPut("inputs", item);
+              break;
+            }
+            item.status = "error";
+            item.error = (err && err.message) ? err.message : "Unknown API error";
+            failed++;
+          } finally {
+            activeAbortController = null;
+          }
+
+          await dbPut("inputs", item);
+          processed++;
+          var donePct = Math.round((processed / queue.length) * 100);
+          el.progressPct.textContent = donePct + "%";
+          el.progressFill.style.width = donePct + "%";
+          renderAll();
+        }
+
+        isRunning = false;
+        updateControlsState();
+
+        if (stopRequested) {
+          el.progressText.textContent = "Stopped after " + processed + " of " + queue.length + " image(s).";
+          toast("Pipeline stopped.", "info");
+        } else {
+          el.progressText.textContent = "Completed: " + succeeded + " succeeded" + (failed ? (", " + failed + " failed") : "") + ".";
+          toast(
+            failed === 0
+              ? ("Pipeline finished! Processed " + succeeded + " image(s).")
+              : ("Pipeline finished: " + succeeded + " succeeded, " + failed + " failed."),
+            failed === 0 ? "success" : "error"
+          );
+        }
+
+        setTimeout(function () {
+          if (!isRunning) el.progressWrap.classList.remove("visible");
+        }, 4000);
+        renderAll();
+      }
+
+      function stopPipeline() {
+        if (!isRunning) return;
+        stopRequested = true;
+        if (activeAbortController) {
+          activeAbortController.abort();
+        }
+        el.progressText.textContent = "Stopping...";
+      }
+
+      /* Queue Management */
+
+      async function addFiles(fileList) {
+        var files = Array.prototype.slice.call(fileList || []);
+        if (files.length === 0) return;
+
+        var imageFiles = files.filter(function (f) { return f.type && f.type.indexOf("image/") === 0; });
+        var skippedNonImage = files.length - imageFiles.length;
+
+        var remainingSlots = MAX_IMAGES - inputs.length;
+        if (remainingSlots <= 0) {
+          toast("Pipeline limit reached (" + MAX_IMAGES + " images max). Remove some images first.", "error");
+          return;
+        }
+
+        var toAdd = imageFiles.slice(0, remainingSlots);
+        var skippedLimit = imageFiles.length - toAdd.length;
+        var maxOrder = inputs.reduce(function (m, item) { return Math.max(m, item.order || 0); }, 0);
+
+        for (var i = 0; i < toAdd.length; i++) {
+          var file = toAdd[i];
+          var dims = await getImageDimensions(file);
+          var record = {
+            id: generateUUID(),
+            name: file.name,
+            type: file.type || "image/jpeg",
+            width: dims.width,
+            height: dims.height,
+            blob: file,
+            status: "pending",
+            error: "",
+            order: ++maxOrder,
+            createdAt: Date.now()
+          };
+          await dbPut("inputs", record);
+          inputs.push(record);
+        }
+
+        renderAll();
+
+        if (toAdd.length > 0) {
+          toast("Added " + toAdd.length + " image(s) to pipeline.", "success");
+        }
+        if (skippedLimit > 0) {
+          toast("Skipped " + skippedLimit + " image(s) - max " + MAX_IMAGES + " images in pipeline.", "info");
+        }
+        if (skippedNonImage > 0) {
+          toast("Skipped " + skippedNonImage + " non-image file(s).", "info");
+        }
+      }
+
+      async function removeInput(inputId) {
+        if (isRunning) {
+          toast("Stop the pipeline before removing items.", "info");
+          return;
+        }
+        inputs = inputs.filter(function (i) { return i.id !== inputId; });
+        revokeObjectUrl(inputId);
+        await dbDelete("inputs", inputId);
+
+        var relatedOutputs = outputs.filter(function (o) { return o.inputId === inputId; });
+        for (var i = 0; i < relatedOutputs.length; i++) {
+          revokeObjectUrl(relatedOutputs[i].id);
+          await dbDelete("outputs", relatedOutputs[i].id);
+        }
+        outputs = outputs.filter(function (o) { return o.inputId !== inputId; });
+        renderAll();
+      }
+
+      async function removeOutput(outputId) {
+        outputs = outputs.filter(function (o) { return o.id !== outputId; });
+        revokeObjectUrl(outputId);
+        await dbDelete("outputs", outputId);
+        if (modalOutputId === outputId) {
+          closeModal();
+        }
+        renderAll();
+      }
+
+      async function resetAllToPending() {
+        if (isRunning) return;
+        for (var i = 0; i < inputs.length; i++) {
+          inputs[i].status = "pending";
+          inputs[i].error = "";
+          await dbPut("inputs", inputs[i]);
+        }
+        renderAll();
+        toast("All queued images reset to Pending.", "info");
+      }
+
+      async function clearOutputs() {
+        if (isRunning || outputs.length === 0) return;
+        if (!confirm("Delete all " + outputs.length + " generated output images from IndexedDB?")) return;
+        for (var i = 0; i < outputs.length; i++) {
+          revokeObjectUrl(outputs[i].id);
+        }
+        outputs = [];
+        await dbClear("outputs");
+        renderAll();
+        toast("All generated outputs cleared.", "info");
+      }
+
+      async function clearAll() {
+        if (isRunning || (inputs.length === 0 && outputs.length === 0)) return;
+        if (!confirm("Delete the entire pipeline queue and all generated images from IndexedDB?")) return;
+        for (var i = 0; i < inputs.length; i++) revokeObjectUrl(inputs[i].id);
+        for (var j = 0; j < outputs.length; j++) revokeObjectUrl(outputs[j].id);
+        inputs = [];
+        outputs = [];
+        await dbClear("inputs");
+        await dbClear("outputs");
+        renderAll();
+        toast("Queue and outputs cleared.", "info");
+      }
+
+      /* Downloads */
+
+      function buildOutputFilename(out, indexWithinInput) {
+        var stem = sanitizeBaseName(out.inputName);
+        var ext = formatExtension(out.format, out.blob ? out.blob.type : "");
+        return stem + "_edit_" + (indexWithinInput || 1) + "." + ext;
+      }
+
+      function downloadSingleOutput(out) {
+        var siblings = outputs.filter(function (o) { return o.inputId === out.inputId; });
+        var idx = Math.max(1, siblings.findIndex(function (o) { return o.id === out.id; }) + 1);
+        var filename = buildOutputFilename(out, idx);
+
+        if (out.blob) {
+          downloadBlob(out.blob, filename);
+        } else if (out.imageURL) {
+          window.open(out.imageURL, "_blank", "noopener");
+        }
+      }
+
+      async function downloadAllAsZip() {
+        if (outputs.length === 0) return;
+        var btn = el.btnDownloadZip;
+        var origText = btn.textContent;
+        btn.disabled = true;
+        btn.textContent = "Building ZIP...";
+
+        try {
+          var files = [];
+          var usedNames = new Set();
+          var countsByInput = new Map();
+
+          for (var i = 0; i < outputs.length; i++) {
+            var out = outputs[i];
+            var blob = out.blob;
+            if (!blob && out.imageURL) {
+              try {
+                var res = await fetch(out.imageURL);
+                if (res.ok) blob = await res.blob();
+              } catch (fetchErr) {
+                continue;
+              }
+            }
+            if (!blob) continue;
+
+            var n = (countsByInput.get(out.inputId) || 0) + 1;
+            countsByInput.set(out.inputId, n);
+
+            var name = buildOutputFilename(out, n);
+            var dup = 2;
+            while (usedNames.has(name)) {
+              var dot = name.lastIndexOf(".");
+              name = name.slice(0, dot) + "_" + (dup++) + name.slice(dot);
+            }
+            usedNames.add(name);
+            files.push({ name: name, blob: blob });
+          }
+
+          if (files.length === 0) {
+            toast("No downloadable image blobs available.", "error");
+            return;
+          }
+
+          var zipBlob = await createZipBlob(files);
+          var stamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, "-");
+          downloadBlob(zipBlob, "runware-outputs-" + stamp + ".zip");
+          toast("Downloaded ZIP with " + files.length + " image(s).", "success");
+        } catch (err) {
+          console.error(err);
+          toast("ZIP creation failed: " + (err.message || err), "error");
+        } finally {
+          btn.textContent = origText;
+          btn.disabled = outputs.length === 0;
+        }
+      }
+
+      /* Rendering (Pure DOM API) */
+
+      function updateControlsState() {
+        var pendingCount = inputs.filter(function (i) { return i.status === "pending"; }).length;
+        var failedCount = inputs.filter(function (i) { return i.status === "error"; }).length;
+
+        el.statQueue.textContent = inputs.length + " / " + MAX_IMAGES;
+        el.statOutputs.textContent = String(outputs.length);
+
+        var totalCost = outputs.reduce(function (sum, o) {
+          return sum + (typeof o.cost === "number" ? o.cost : 0);
+        }, 0);
+        if (totalCost > 0) {
+          el.statCostPill.style.display = "";
+          el.statCost.textContent = "$" + totalCost.toFixed(4);
+        } else {
+          el.statCostPill.style.display = "none";
+        }
+
+        el.btnDownloadZip.disabled = outputs.length === 0;
+        el.btnRun.disabled = isRunning || inputs.length === 0;
+        el.btnRun.textContent = pendingCount > 0 ? ("Run Pipeline (" + pendingCount + ")") : "Run Pipeline";
+        el.btnStop.style.display = isRunning ? "" : "none";
+        el.btnRetryFailed.style.display = !isRunning && failedCount > 0 ? "" : "none";
+        el.btnRetryFailed.textContent = "Retry Failed (" + failedCount + ")";
+        el.btnResetPending.disabled = isRunning || inputs.length === 0;
+        el.btnClearOutputs.disabled = isRunning || outputs.length === 0;
+        el.btnClearAll.disabled = isRunning || (inputs.length === 0 && outputs.length === 0);
+
+        el.dropzone.classList.toggle("compact", inputs.length > 0);
+      }
+
+      function renderAll() {
+        updateControlsState();
+        if (activeView === "pipeline") {
+          el.pipelineList.style.display = "";
+          el.galleryGrid.style.display = "none";
+          renderPipelineList();
+        } else {
+          el.pipelineList.style.display = "none";
+          el.galleryGrid.style.display = "";
+          renderGalleryGrid();
+        }
+      }
+
+      function createStatusBadge(item, outCount) {
+        var span = document.createElement("span");
+        if (item.status === "processing") {
+          span.className = "badge badge-processing";
+          var sp = document.createElement("span");
+          sp.className = "spinner";
+          span.appendChild(sp);
+          span.appendChild(document.createTextNode(" Processing"));
+        } else if (item.status === "done") {
+          span.className = "badge badge-done";
+          span.textContent = "Done (" + outCount + ")";
+        } else if (item.status === "error") {
+          span.className = "badge badge-error";
+          span.textContent = "Failed";
+        } else {
+          span.className = "badge badge-pending";
+          span.textContent = "Pending";
+        }
+        return span;
+      }
+
+      function createOutputCard(out, captionText) {
+        var url = getObjectUrl(out.id, out.blob, out.imageURL);
+
+        var card = document.createElement("div");
+        card.className = "out-card";
+
+        var img = document.createElement("img");
+        img.className = "out-thumb";
+        img.src = url;
+        img.alt = "Generated result";
+        img.loading = "lazy";
+        img.addEventListener("click", function () { openModal(out.id); });
+        card.appendChild(img);
+
+        var footer = document.createElement("div");
+        footer.className = "out-footer";
+
+        var cap = document.createElement("span");
+        cap.className = "out-caption";
+        cap.textContent = captionText;
+        cap.title = captionText;
+        footer.appendChild(cap);
+
+        var actions = document.createElement("div");
+        actions.className = "out-actions";
+
+        var dlBtn = document.createElement("button");
+        dlBtn.className = "mini-icon-btn";
+        dlBtn.type = "button";
+        dlBtn.title = "Download";
+        dlBtn.textContent = "Save";
+        dlBtn.addEventListener("click", function (e) {
+          e.stopPropagation();
+          downloadSingleOutput(out);
+        });
+        actions.appendChild(dlBtn);
+
+        var delBtn = document.createElement("button");
+        delBtn.className = "mini-icon-btn del";
+        delBtn.type = "button";
+        delBtn.title = "Delete";
+        delBtn.textContent = "X";
+        delBtn.addEventListener("click", function (e) {
+          e.stopPropagation();
+          removeOutput(out.id);
+        });
+        actions.appendChild(delBtn);
+
+        footer.appendChild(actions);
+        card.appendChild(footer);
+        return card;
+      }
+
+      function renderPipelineList() {
+        el.pipelineList.textContent = "";
+
+        var filtered = inputs.filter(function (item) {
+          if (activeFilter === "all") return true;
+          return item.status === activeFilter;
+        });
+
+        if (filtered.length === 0) {
+          var empty = document.createElement("div");
+          empty.className = "empty-state";
+          empty.textContent = inputs.length === 0
+            ? "No images in the pipeline yet. Drop images above to get started."
+            : ('No images match the "' + activeFilter + '" filter.');
+          el.pipelineList.appendChild(empty);
+          return;
+        }
+
+        var outputsMap = new Map();
+        for (var i = 0; i < outputs.length; i++) {
+          var o = outputs[i];
+          if (!outputsMap.has(o.inputId)) outputsMap.set(o.inputId, []);
+          outputsMap.get(o.inputId).push(o);
+        }
+
+        var frag = document.createDocumentFragment();
+
+        filtered.forEach(function (item) {
+          var globalIdx = inputs.indexOf(item) + 1;
+          var itemOutputs = outputsMap.get(item.id) || [];
+          var inputUrl = getObjectUrl(item.id, item.blob);
+
+          var row = document.createElement("div");
+          row.className = "pipe-item status-" + item.status;
+
+          var inputCol = document.createElement("div");
+          inputCol.className = "pipe-input-col";
+
+          var thumbWrap = document.createElement("div");
+          thumbWrap.className = "input-thumb-wrap";
+          var thumbImg = document.createElement("img");
+          thumbImg.src = inputUrl;
+          thumbImg.alt = item.name;
+          thumbImg.loading = "lazy";
+          var idxBadge = document.createElement("span");
+          idxBadge.className = "index-badge";
+          idxBadge.textContent = "#" + globalIdx;
+          thumbWrap.appendChild(thumbImg);
+          thumbWrap.appendChild(idxBadge);
+          inputCol.appendChild(thumbWrap);
+
+          var meta = document.createElement("div");
+          meta.className = "input-meta";
+
+          var nameEl = document.createElement("div");
+          nameEl.className = "input-name";
+          nameEl.textContent = item.name;
+          nameEl.title = item.name;
+          meta.appendChild(nameEl);
+
+          var dimsEl = document.createElement("div");
+          dimsEl.className = "input-dims";
+          dimsEl.textContent = (item.width && item.height) ? (item.width + " x " + item.height) : "Unknown size";
+          meta.appendChild(dimsEl);
+
+          meta.appendChild(createStatusBadge(item, itemOutputs.length));
+
+          var btnRow = document.createElement("div");
+          btnRow.className = "item-btns";
+
+          var runOneBtn = document.createElement("button");
+          runOneBtn.className = "btn btn-sm";
+          runOneBtn.type = "button";
+          runOneBtn.disabled = isRunning;
+          runOneBtn.textContent = itemOutputs.length ? "Re-run" : "Run";
+          runOneBtn.addEventListener("click", function () { runPipeline([item.id]); });
+          btnRow.appendChild(runOneBtn);
+
+          var rmBtn = document.createElement("button");
+          rmBtn.className = "btn btn-sm btn-danger";
+          rmBtn.type = "button";
+          rmBtn.disabled = isRunning;
+          rmBtn.textContent = "Remove";
+          rmBtn.addEventListener("click", function () { removeInput(item.id); });
+          btnRow.appendChild(rmBtn);
+
+          meta.appendChild(btnRow);
+          inputCol.appendChild(meta);
+          row.appendChild(inputCol);
+
+          var outCol = document.createElement("div");
+          outCol.className = "pipe-outputs-col";
+
+          if (item.error) {
+            var errBox = document.createElement("div");
+            errBox.className = "error-box";
+            errBox.textContent = item.error;
+            outCol.appendChild(errBox);
+          }
+
+          var outRow = document.createElement("div");
+          outRow.className = "outputs-row";
+
+          if (itemOutputs.length === 0) {
+            var placeholder = document.createElement("div");
+            placeholder.className = "no-outputs";
+            placeholder.textContent = item.status === "processing"
+              ? "Generating with Runware..."
+              : "Generated outputs will appear here";
+            outRow.appendChild(placeholder);
+          } else {
+            itemOutputs.forEach(function (out, idx) {
+              outRow.appendChild(createOutputCard(out, "#" + (idx + 1) + " | " + out.width + "x" + out.height));
+            });
+          }
+
+          outCol.appendChild(outRow);
+          row.appendChild(outCol);
+          frag.appendChild(row);
+        });
+
+        el.pipelineList.appendChild(frag);
+      }
+
+      function renderGalleryGrid() {
+        el.galleryGrid.textContent = "";
+        if (outputs.length === 0) {
+          var empty = document.createElement("div");
+          empty.className = "empty-state";
+          empty.style.gridColumn = "1 / -1";
+          empty.textContent = "No generated images yet. Run the pipeline to see results here.";
+          el.galleryGrid.appendChild(empty);
+          return;
+        }
+
+        var frag = document.createDocumentFragment();
+        var sorted = outputs.slice().sort(function (a, b) { return b.createdAt - a.createdAt; });
+        for (var i = 0; i < sorted.length; i++) {
+          frag.appendChild(createOutputCard(sorted[i], sorted[i].inputName));
+        }
+        el.galleryGrid.appendChild(frag);
+      }
+
+      /* Lightbox Modal */
+
+      function openModal(outputId) {
+        modalOutputId = outputId;
+        renderModal();
+        el.modalBackdrop.classList.add("open");
+      }
+
+      function closeModal() {
+        el.modalBackdrop.classList.remove("open");
+        modalOutputId = null;
+      }
+
+      function renderModal() {
+        var idx = outputs.findIndex(function (o) { return o.id === modalOutputId; });
+        if (idx === -1) {
+          closeModal();
+          return;
+        }
+        var out = outputs[idx];
+        var orig = inputs.find(function (i) { return i.id === out.inputId; });
+
+        el.modalTitle.textContent = out.inputName + " (" + (idx + 1) + " / " + outputs.length + ")";
+        el.modalOutImg.src = getObjectUrl(out.id, out.blob, out.imageURL);
+        el.modalPrompt.textContent = out.prompt ? ("Prompt: " + out.prompt) : "";
+        el.modalPrompt.title = out.prompt || "";
+
+        var metaParts = [out.model, out.width + "x" + out.height, out.format];
+        if (out.seed !== null && out.seed !== undefined) metaParts.push("Seed: " + out.seed);
+        if (typeof out.cost === "number") metaParts.push("$" + out.cost.toFixed(4));
+        el.modalMeta.textContent = metaParts.filter(Boolean).join(" | ");
+
+        el.btnModalPrev.disabled = idx <= 0;
+        el.btnModalNext.disabled = idx >= outputs.length - 1;
+
+        if (modalCompare && orig) {
+          el.modalBody.classList.add("side-by-side");
+          el.modalOrigBox.style.display = "";
+          el.modalOrigImg.src = getObjectUrl(orig.id, orig.blob);
+          el.modalOutLabel.style.display = "";
+          el.btnModalCompare.textContent = "Side-by-Side: On";
+          el.btnModalCompare.disabled = false;
+        } else {
+          el.modalBody.classList.remove("side-by-side");
+          el.modalOrigBox.style.display = "none";
+          el.modalOutLabel.style.display = "none";
+          el.btnModalCompare.textContent = orig ? "Side-by-Side: Off" : "Original Removed";
+          el.btnModalCompare.disabled = !orig;
+        }
+      }
+
+      function bindModalEvents() {
+        el.btnModalClose.addEventListener("click", closeModal);
+        el.modalBackdrop.addEventListener("click", function (e) {
+          if (e.target === el.modalBackdrop) closeModal();
+        });
+        el.btnModalCompare.addEventListener("click", function () {
+          modalCompare = !modalCompare;
+          renderModal();
+        });
+        el.btnModalPrev.addEventListener("click", function () {
+          var idx = outputs.findIndex(function (o) { return o.id === modalOutputId; });
+          if (idx > 0) {
+            modalOutputId = outputs[idx - 1].id;
+            renderModal();
+          }
+        });
+        el.btnModalNext.addEventListener("click", function () {
+          var idx = outputs.findIndex(function (o) { return o.id === modalOutputId; });
+          if (idx >= 0 && idx < outputs.length - 1) {
+            modalOutputId = outputs[idx + 1].id;
+            renderModal();
+          }
+        });
+        el.btnModalDownload.addEventListener("click", function () {
+          var out = outputs.find(function (o) { return o.id === modalOutputId; });
+          if (out) downloadSingleOutput(out);
+        });
+        el.btnModalDelete.addEventListener("click", function () {
+          if (modalOutputId) removeOutput(modalOutputId);
+        });
+
+        window.addEventListener("keydown", function (e) {
+          if (!el.modalBackdrop.classList.contains("open")) return;
+          if (e.key === "Escape") closeModal();
+          else if (e.key === "ArrowLeft") el.btnModalPrev.click();
+          else if (e.key === "ArrowRight") el.btnModalNext.click();
+        });
+      }
+
+      /* Workspace Events */
+
+      function bindWorkspaceEvents() {
+        el.dropzone.addEventListener("click", function () { el.fileInput.click(); });
+        el.fileInput.addEventListener("change", function () {
+          if (el.fileInput.files && el.fileInput.files.length) {
+            addFiles(el.fileInput.files);
+            el.fileInput.value = "";
+          }
+        });
+
+        el.dropzone.addEventListener("dragover", function (e) {
+          e.preventDefault();
+          el.dropzone.classList.add("dragover");
+        });
+        el.dropzone.addEventListener("dragleave", function () {
+          el.dropzone.classList.remove("dragover");
+        });
+        el.dropzone.addEventListener("drop", function (e) {
+          e.preventDefault();
+          el.dropzone.classList.remove("dragover");
+          if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files.length) {
+            addFiles(e.dataTransfer.files);
+          }
+        });
+
+        el.btnRun.addEventListener("click", function () { runPipeline(null); });
+        el.btnStop.addEventListener("click", stopPipeline);
+        el.btnRetryFailed.addEventListener("click", function () {
+          var failedIds = inputs.filter(function (i) { return i.status === "error"; }).map(function (i) { return i.id; });
+          runPipeline(failedIds);
+        });
+        el.btnResetPending.addEventListener("click", resetAllToPending);
+        el.btnClearOutputs.addEventListener("click", clearOutputs);
+        el.btnClearAll.addEventListener("click", clearAll);
+        el.btnDownloadZip.addEventListener("click", downloadAllAsZip);
+
+        el.filterTabs.addEventListener("click", function (e) {
+          var btn = e.target.closest(".tab-btn");
+          if (!btn) return;
+          activeFilter = btn.dataset.filter;
+          el.filterTabs.querySelectorAll(".tab-btn").forEach(function (b) {
+            b.classList.toggle("active", b === btn);
+          });
+          renderAll();
+        });
+
+        el.viewTabs.addEventListener("click", function (e) {
+          var btn = e.target.closest(".tab-btn");
+          if (!btn) return;
+          activeView = btn.dataset.view;
+          el.viewTabs.querySelectorAll(".tab-btn").forEach(function (b) {
+            b.classList.toggle("active", b === btn);
+          });
+          el.filterTabs.style.display = activeView === "pipeline" ? "" : "none";
+          renderAll();
+        });
+      }
+
+      /* Initialization */
+
+      async function init() {
+        applySettingsToUI();
+        bindSettingsEvents();
+        bindWorkspaceEvents();
+        bindModalEvents();
+
+        try {
+          db = await openDB();
+          var storedInputs = await dbGetAll("inputs");
+          var storedOutputs = await dbGetAll("outputs");
+          inputs = storedInputs.sort(function (a, b) { return (a.order || 0) - (b.order || 0); });
+          outputs = storedOutputs.sort(function (a, b) { return (a.createdAt || 0) - (b.createdAt || 0); });
+
+          for (var i = 0; i < inputs.length; i++) {
+            if (inputs[i].status === "processing") {
+              inputs[i].status = "pending";
+              await dbPut("inputs", inputs[i]);
+            }
+          }
+          renderAll();
+        } catch (err) {
+          console.error("IndexedDB initialization error:", err);
+          toast("IndexedDB failed to open. Private browsing or sandboxed iframes may restrict storage.", "error");
+        }
+      }
+
+      init();
+    });
+  </script>
+</body>
+</html>
