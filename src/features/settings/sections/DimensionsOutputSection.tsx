@@ -7,6 +7,7 @@ import {
   Select,
   Slider,
   Stack,
+  Switch,
   Text,
   Title,
 } from '@mantine/core';
@@ -155,6 +156,17 @@ export function DimensionsOutputSection() {
                 ]}
               />
             </Stack>
+          </Grid.Col>
+
+          <Grid.Col span={12}>
+            <Switch
+              label="Show generation time on images"
+              description="Display a badge showing how long each generation took on output images and in the lightbox"
+              checked={settings.showGenerationTime}
+              onChange={(event) =>
+                updateSettings({ showGenerationTime: event.currentTarget.checked })
+              }
+            />
           </Grid.Col>
         </Grid>
       </Stack>

@@ -68,6 +68,7 @@ export interface GenerationSettings {
   deliveryMethod: DeliveryMethod;
   asyncPollIntervalMs: number;
   asyncTimeoutMs: number;
+  showGenerationTime: boolean;
 }
 
 export interface ModelPresetConfig {
@@ -110,6 +111,7 @@ export interface OutputRecord {
   model: string;
   seed: number | string | null;
   cost: number | null;
+  durationMs?: number | null;
   createdAt: number;
 }
 

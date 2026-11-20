@@ -42,6 +42,7 @@ export const DEFAULT_SETTINGS: GenerationSettings = {
   deliveryMethod: 'sync',
   asyncPollIntervalMs: 1500,
   asyncTimeoutMs: 180000,
+  showGenerationTime: true,
 };
 
 export const MODEL_PRESETS: Record<string, ModelPresetConfig> = {

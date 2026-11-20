@@ -14,6 +14,7 @@ import {
 import {
   IconChevronLeft,
   IconChevronRight,
+  IconClock,
   IconColumns,
   IconDownload,
   IconFaceId,
@@ -27,12 +28,15 @@ import { useEffect, useState } from 'react';
 import { useServices } from '../../app/ServicesContext';
 import { useLightbox } from '../../app/state/LightboxContext';
 import { useQueueData } from '../../app/state/QueueDataContext';
+import { useSettings } from '../../app/state/SettingsContext';
+import { formatDuration } from '../../utils/duration';
 import { useImageZoom } from '../media/useImageZoom';
 import { ZoomableImage } from '../media/ZoomableImage';
 
 export function LightboxModal() {
   const { exportSingleOutput } = useServices();
   const { inputs, outputs, getObjectUrl, removeOutput } = useQueueData();
+  const { settings } = useSettings();
   const {
     activeOutputId,
     activeInputId,
@@ -121,6 +125,9 @@ export function LightboxModal() {
         activeOutput.model,
         `${activeOutput.width}x${activeOutput.height}`,
         activeOutput.format,
+        ...(typeof activeOutput.durationMs === 'number'
+          ? [formatDuration(activeOutput.durationMs)]
+          : []),
         ...(activeOutput.seed !== null && activeOutput.seed !== undefined
           ? [`Seed: ${activeOutput.seed}`]
           : []),
@@ -324,6 +331,21 @@ export function LightboxModal() {
                   fit="contain"
                   height="60vh"
                   transform={primaryZoom.transform}
+                  bottomLeftOverlay={
+                    settings.showGenerationTime &&
+                    activeOutput &&
+                    typeof activeOutput.durationMs === 'number' ? (
+                      <Badge
+                        size="sm"
+                        variant="filled"
+                        color="dark"
+                        leftSection={<IconClock size={12} />}
+                        style={{ backgroundColor: 'rgba(18, 19, 24, 0.85)' }}
+                      >
+                        {formatDuration(activeOutput.durationMs)}
+                      </Badge>
+                    ) : undefined
+                  }
                   onWheelZoom={primaryZoom.applyWheelZoom}
                   onPanByPixels={primaryZoom.panByPixels}
                   onDoubleClick={primaryZoom.toggleQuickZoom}

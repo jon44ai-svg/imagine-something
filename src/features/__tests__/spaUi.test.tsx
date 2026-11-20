@@ -279,4 +279,46 @@ describe('SPA UI flows (Settings & Lightbox)', () => {
     });
     expect(await screen.findByText('Face')).toBeInTheDocument();
   });
+
+  it('displays generation duration badge on output images and hides it when toggled off in settings', async () => {
+    const user = userEvent.setup();
+    const container = createStubContainer({
+      settings: { showGenerationTime: true },
+      outputs: [
+        {
+          id: 'out-timed-1',
+          inputId: 'in-1',
+          inputName: 'cat.png',
+          blob: new Blob(['gen1'], { type: 'image/png' }),
+          imageURL: 'https://cdn.example/1.png',
+          width: 1024,
+          height: 1024,
+          format: 'PNG',
+          model: 'bfl:2@1',
+          prompt: 'fast edit',
+          seed: 1,
+          cost: 0.01,
+          durationMs: 4320,
+          createdAt: 2000,
+        },
+      ],
+    });
+
+    renderAppAt('/gallery', container);
+
+    // Shown by default when showGenerationTime is enabled
+    expect(await screen.findByText('4.3s')).toBeInTheDocument();
+
+    // Navigate to Settings and toggle off "Show generation time on images"
+    await user.click(screen.getByText('Settings'));
+    const toggle = await screen.findByLabelText(/Show generation time on images/i);
+    expect(toggle).toBeChecked();
+    await user.click(toggle);
+    expect(toggle).not.toBeChecked();
+
+    // Return to Gallery — badge should no longer be displayed on the image
+    await user.click(screen.getByText('Outputs Gallery'));
+    expect(await screen.findByText('cat.png')).toBeInTheDocument();
+    expect(screen.queryByText('4.3s')).not.toBeInTheDocument();
+  });
 });

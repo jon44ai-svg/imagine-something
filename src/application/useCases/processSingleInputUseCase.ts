@@ -72,7 +72,9 @@ export class ProcessSingleInputUseCase {
     };
 
     const strategy = this.strategyResolver.resolve(settings.deliveryMethod);
+    const startedAt = this.clock.now();
     const payloads = await strategy.execute(request, signal);
+    const durationMs = Math.max(0, this.clock.now() - startedAt);
 
     const savedOutputs: OutputRecord[] = [];
     for (const payload of payloads) {
@@ -90,6 +92,7 @@ export class ProcessSingleInputUseCase {
         model: request.model,
         seed: payload.seed !== undefined ? payload.seed : null,
         cost: typeof payload.cost === 'number' ? payload.cost : null,
+        durationMs,
         createdAt: this.clock.now(),
       };
       await this.outputWriter.save(record);

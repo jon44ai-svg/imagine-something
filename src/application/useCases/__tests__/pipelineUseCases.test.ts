@@ -176,6 +176,48 @@ describe('Queue & maintenance use-cases', () => {
       validator.execute('key', { ...DEFAULT_SETTINGS, positivePrompt: 'retro style' }),
     ).toEqual({ ok: true });
   });
+
+  it('ProcessSingleInputUseCase records elapsed generation durationMs from the clock', async () => {
+    const { outputStore } = createInMemoryStores();
+    let nowMs = 10_000;
+    const clock: IClock = {
+      now: () => nowMs,
+      sleep: async () => {},
+    };
+
+    const encoder: IInputImageEncoder = {
+      toInferenceDataUri: async () => 'data:image/png;base64,AA==',
+    };
+    const hydrator: IOutputImageHydrator = {
+      hydrateBlob: async () => new Blob(['gen'], { type: 'image/jpeg' }),
+    };
+    const resolver: IGenerationStrategyResolver = {
+      resolve: () => ({
+        execute: async () => {
+          nowMs += 4320;
+          return [{ imageDataURI: 'data:image/jpeg;base64,AA==', seed: 42, cost: 0.002 }];
+        },
+      }),
+    };
+
+    const useCase = new ProcessSingleInputUseCase(
+      encoder,
+      resolver,
+      hydrator,
+      outputStore,
+      { next: () => 'out-timed' },
+      clock,
+    );
+
+    const saved = await useCase.execute(
+      makeInputRecord('in-1', 1),
+      { ...DEFAULT_SETTINGS, positivePrompt: 'studio portrait' },
+      'rw_key',
+    );
+
+    expect(saved).toHaveLength(1);
+    expect(saved[0].durationMs).toBe(4320);
+  });
 });
 
 describe('RunBatchPipelineUseCase (parallelism, global stop & per-item cancel)', () => {

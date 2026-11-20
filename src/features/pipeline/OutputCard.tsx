@@ -1,9 +1,11 @@
-import { ActionIcon, Card, Group, Text, Tooltip } from '@mantine/core';
-import { IconDownload, IconX } from '@tabler/icons-react';
+import { ActionIcon, Badge, Card, Group, Text, Tooltip } from '@mantine/core';
+import { IconClock, IconDownload, IconX } from '@tabler/icons-react';
 import { useServices } from '../../app/ServicesContext';
 import { useLightbox } from '../../app/state/LightboxContext';
 import { useQueueData } from '../../app/state/QueueDataContext';
+import { useSettings } from '../../app/state/SettingsContext';
 import type { OutputRecord } from '../../domain/models';
+import { formatDuration } from '../../utils/duration';
 import { useImageZoom } from '../media/useImageZoom';
 import { ZoomableImage } from '../media/ZoomableImage';
 
@@ -22,6 +24,7 @@ export function OutputCard({
 }: OutputCardProps) {
   const { exportSingleOutput } = useServices();
   const { getObjectUrl, removeOutput } = useQueueData();
+  const { settings } = useSettings();
   const { openLightbox, activeOutputId, closeLightbox } = useLightbox();
 
   const imageSrc = getObjectUrl(output.id, output.blob, output.imageURL);
@@ -47,6 +50,20 @@ export function OutputCard({
           : 'Face'
       : null;
 
+  const durationOverlay =
+    settings.showGenerationTime && typeof output.durationMs === 'number' ? (
+      <Badge
+        size="xs"
+        variant="filled"
+        color="dark"
+        leftSection={<IconClock size={10} />}
+        style={{ backgroundColor: 'rgba(18, 19, 24, 0.82)' }}
+        title={`Generated in ${formatDuration(output.durationMs)}`}
+      >
+        {formatDuration(output.durationMs)}
+      </Badge>
+    ) : undefined;
+
   return (
     <Card
       withBorder
@@ -67,6 +84,7 @@ export function OutputCard({
         faceFocusActive={zoom.faceFocusActive}
         isDetectingFace={zoom.isDetectingFace}
         faceBadgeText={faceBadgeText}
+        bottomLeftOverlay={durationOverlay}
         onZoomIn={zoom.zoomIn}
         onZoomOut={zoom.zoomOut}
         onResetZoom={zoom.resetZoom}
