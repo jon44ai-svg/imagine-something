@@ -2,6 +2,7 @@ import { MantineProvider } from '@mantine/core';
 import { ModalsProvider } from '@mantine/modals';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { ContextMenuProvider } from 'mantine-contextmenu';
 import { MemoryRouter } from 'react-router-dom';
 import { describe, expect, it, vi } from 'vitest';
 import type { AppContainer } from '../../app/container';
@@ -84,21 +85,23 @@ function createStubContainer(initial?: {
 function renderAppAt(route: string, container: AppContainer) {
   return render(
     <MantineProvider theme={appTheme} defaultColorScheme="dark">
-      <ModalsProvider>
-        <MemoryRouter initialEntries={[route]}>
-          <ServicesProvider container={container}>
-            <SettingsProvider>
-              <QueueDataProvider>
-                <ExecutionProvider>
-                  <LightboxProvider>
-                    <AppRoutes />
-                  </LightboxProvider>
-                </ExecutionProvider>
-              </QueueDataProvider>
-            </SettingsProvider>
-          </ServicesProvider>
-        </MemoryRouter>
-      </ModalsProvider>
+      <ContextMenuProvider>
+        <ModalsProvider>
+          <MemoryRouter initialEntries={[route]}>
+            <ServicesProvider container={container}>
+              <SettingsProvider>
+                <QueueDataProvider>
+                  <ExecutionProvider>
+                    <LightboxProvider>
+                      <AppRoutes />
+                    </LightboxProvider>
+                  </ExecutionProvider>
+                </QueueDataProvider>
+              </SettingsProvider>
+            </ServicesProvider>
+          </MemoryRouter>
+        </ModalsProvider>
+      </ContextMenuProvider>
     </MantineProvider>,
   );
 }
